@@ -383,7 +383,7 @@ export default function AIAssistantScreen() {
           <MaterialCommunityIcons name="robot-outline" size={20} color={GOLD} />
           <Text style={[styles.navLabel, styles.navLabelActive]}>AI ASSISTANT</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/alerts')}>
           <Feather name="bell" size={20} color={TEXT_MUTED} />
           <Text style={styles.navLabel}>ALERTS</Text>
         </TouchableOpacity>

@@ -46,8 +46,15 @@ TOOLS = {
         "params": [],
     },
     "submit_request": {
-        "description": "Submit a new approval request — leave, OD, certificate, room, LOR",
-        "params": ["type", "title", "description"],
+        "description": (
+            "Submit a new approval request. REQUIRED: type and title. Optional: description, steps, meta. "
+            "type must be one of: leave, room, event, certificate, lor, research, od, lab_access, event_permission, custom. "
+            "For 'steps', provide an array of objects e.g. [{'approver': '<user_id>', 'role': 'hod'}]. If steps is omitted, the approval chain is auto-generated. "
+            "For LOR (lor) or research directed at a specific professor, set meta.facultyEmail to that professor's "
+            "campus email (lowercase) so the first approval step routes to them. You may also set meta.tags (string array) "
+            "for topic matching. Example params: {\"type\":\"lor\",\"title\":\"Letter of recommendation\",\"description\":\"...\",\"steps\":[{\"approver\":\"prof123\",\"role\":\"faculty\"}],\"meta\":{\"facultyEmail\":\"prof@college.edu\",\"tags\":[\"ml\"]}}"
+        ),
+        "params": ["type", "title", "description", "steps", "meta"],
     },
     "approve_request": {
         "description": "Approve or reject a pending approval request",

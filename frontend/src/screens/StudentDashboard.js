@@ -384,7 +384,7 @@ export default function StudentDashboard() {
             <MaterialCommunityIcons name="robot-outline" size={24} color={BG} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/alerts')}>
           <Feather name="bell" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>ALERTS</Text>
         </TouchableOpacity>

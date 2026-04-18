@@ -60,6 +60,23 @@ const formatDate = (dateString) => {
   }
 };
 
+// ── BUG FIX 1: Safe ID comparison that handles ObjectId objects, strings, and null ──
+// MongoDB ObjectIds are objects with a toString() method. A direct === check between
+// an ObjectId and a plain string always returns false even if the values are identical.
+const idsMatch = (a, b) => {
+  if (!a || !b) return false;
+  return String(a) === String(b);
+};
+
+// ── BUG FIX 2: Safely extract approver ID regardless of whether the field is
+//    populated (returns an object like { _id, name }) or unpopulated (returns a string) ──
+const getApproverId = (approver) => {
+  if (!approver) return null;
+  if (typeof approver === 'string') return approver;
+  // Populated object — use ._id (coerce to string via idsMatch)
+  return approver._id ?? null;
+};
+
 const InitialAvatar = ({ name }) => {
   const initials = (name || 'U')
     .split(' ')
@@ -77,10 +94,10 @@ const InitialAvatar = ({ name }) => {
 
 export default function ApprovalsScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('All');
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [actioningId, setActioningId] = useState(null);
+  const [activeTab, setActiveTab]       = useState('All');
+  const [requests, setRequests]         = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [actioningId, setActioningId]   = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
@@ -93,7 +110,8 @@ export default function ApprovalsScreen() {
       const rawUser = await AsyncStorage.getItem('user');
       if (!rawUser) return;
       const parsed = JSON.parse(rawUser);
-      setCurrentUserId(parsed?._id || null);
+      // Coerce to string immediately so all comparisons stay in string-land
+      setCurrentUserId(parsed?._id ? String(parsed._id) : null);
     } catch {
       setCurrentUserId(null);
     }
@@ -107,9 +125,7 @@ export default function ApprovalsScreen() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Failed to load approvals');
-      }
+      if (!res.ok) throw new Error(data.message || 'Failed to load approvals');
       setRequests(Array.isArray(data) ? data : []);
     } catch (error) {
       Alert.alert('Error', error.message || 'Unable to fetch approvals.');
@@ -119,13 +135,28 @@ export default function ApprovalsScreen() {
   };
 
   const filteredRequests = useMemo(() => {
+    // ── BUG FIX 3: Don't render anything until we know who the faculty IS.
+    //    The original code used `approverId && currentUserId ? ... : true` which
+    //    means "if we don't have a currentUserId yet, show EVERY pending request".
+    //    This caused the opposite problem on a fast connection: a flash of all items.
+    //    More critically, on slow loads it never recovered because currentUserId stayed
+    //    null and the comparison branch was never re-evaluated correctly.
+    //    Now we gate on currentUserId being ready before applying the approver filter. ──
+    if (!currentUserId) return [];
+
     const actionable = requests.filter((req) => {
+      // Must be pending
       if (!req || req.overallStatus !== 'pending') return false;
+
+      // Must have a valid steps array and a currentStep index
       if (!Array.isArray(req.steps) || typeof req.currentStep !== 'number') return false;
+
       const step = req.steps[req.currentStep];
-      if (!step || !step.approver) return false;
-      const approverId = typeof step.approver === 'string' ? step.approver : step.approver?._id;
-      return approverId && currentUserId ? approverId === currentUserId : true;
+      if (!step) return false;
+
+      // ── Use the safe helpers so ObjectId vs string is never an issue ──
+      const approverId = getApproverId(step.approver);
+      return idsMatch(approverId, currentUserId);
     });
 
     if (activeTab === 'All') return actionable;
@@ -148,9 +179,7 @@ export default function ApprovalsScreen() {
       });
 
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || `Failed to ${action} request`);
-      }
+      if (!res.ok) throw new Error(data.message || `Failed to ${action} request`);
 
       await fetchRequests();
     } catch (error) {
@@ -183,7 +212,8 @@ export default function ApprovalsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {loading ? (
+        {/* Show spinner while either user or requests are still loading */}
+        {loading || !currentUserId ? (
           <View style={styles.loaderWrap}>
             <ActivityIndicator size="large" color={theme.primary} />
           </View>
@@ -211,8 +241,13 @@ export default function ApprovalsScreen() {
                   disabled={actioningId === req._id}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="close-outline" size={18} color={theme.errorText} />
-                  <Text style={styles.rejectText}>Reject</Text>
+                  {actioningId === req._id
+                    ? <ActivityIndicator size="small" color={theme.errorText} />
+                    : <>
+                        <Ionicons name="close-outline" size={18} color={theme.errorText} />
+                        <Text style={styles.rejectText}>Reject</Text>
+                      </>
+                  }
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -221,8 +256,13 @@ export default function ApprovalsScreen() {
                   disabled={actioningId === req._id}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="checkmark-outline" size={18} color={theme.successText} />
-                  <Text style={styles.approveText}>Approve</Text>
+                  {actioningId === req._id
+                    ? <ActivityIndicator size="small" color={theme.successText} />
+                    : <>
+                        <Ionicons name="checkmark-outline" size={18} color={theme.successText} />
+                        <Text style={styles.approveText}>Approve</Text>
+                      </>
+                  }
                 </TouchableOpacity>
               </View>
             </View>

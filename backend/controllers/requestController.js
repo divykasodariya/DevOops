@@ -108,10 +108,10 @@ export const createRequest = async (req, res) => {
 
       // Fallback if no steps were added
       if (steps.length === 0) {
-        // Find an admin as fallback
-        const admin = await ProfessorProfile.db.model('User').findOne({ role: 'admin' });
-        if (admin) {
-          steps.push({ order: 1, approver: admin._id, role: 'admin', status: 'pending' });
+        // Fallback to a faculty or HOD since departments aren't fully set up yet
+        const fallbackUser = await ProfessorProfile.db.model('User').findOne({ role: { $in: ['hod', 'faculty'] } });
+        if (fallbackUser) {
+          steps.push({ order: 1, approver: fallbackUser._id, role: fallbackUser.role, status: 'pending' });
         }
       }
     }
