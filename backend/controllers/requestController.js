@@ -339,3 +339,41 @@ export const getApproverCandidates = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// ─────────────────────────────────────────────
+// GET /request/resolve-approver?email=...&role=...
+// Resolve approver by email (optionally role-constrained)
+// ─────────────────────────────────────────────
+export const resolveApproverByEmail = async (req, res) => {
+  try {
+    const rawEmail = String(req.query.email || '').trim().toLowerCase();
+    const role = String(req.query.role || '').trim().toLowerCase();
+    const allowedRoles = ['faculty', 'hod', 'principal', 'admin', 'support'];
+
+    if (!rawEmail) {
+      return res.status(400).json({ message: 'email query param is required' });
+    }
+
+    const query = {
+      email: rawEmail,
+      isActive: true,
+      role: { $in: allowedRoles },
+    };
+
+    if (role) {
+      if (!allowedRoles.includes(role)) {
+        return res.status(400).json({ message: 'Invalid role filter' });
+      }
+      query.role = role;
+    }
+
+    const user = await User.findOne(query).select('_id name email role');
+    if (!user) {
+      return res.status(404).json({ message: 'No active approver found for this email' });
+    }
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

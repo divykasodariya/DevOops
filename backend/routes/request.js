@@ -7,6 +7,7 @@ import {
   actionRequest,
   getMyPendingRequests,
   getApproverCandidates,
+  resolveApproverByEmail,
 } from '../controllers/requestController.js';
 
 const router = express.Router();
@@ -20,6 +21,9 @@ router.route('/pending')
 
 router.route('/approvers')
   .get(protect, getApproverCandidates);
+
+router.route('/resolve-approver')
+  .get(protect, resolveApproverByEmail);
 
 router.route('/:id')
   .get(protect, getRequestById);
