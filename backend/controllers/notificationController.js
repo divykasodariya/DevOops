@@ -21,12 +21,12 @@ export const getMyNotifications = async (req, res) => {
 // ─────────────────────────────────────────────
 export const getAnnouncements = async (req, res) => {
   try {
+    // Every published notice creates one Notification per recipient; return all of this user's
+    // announcement rows (no cap — faculty/students see their full inbox).
     const announcements = await Notification.find({
       recipient: req.user._id,
-      type: 'announcement'
-    })
-      .sort({ createdAt: -1 })
-      .limit(10);
+      type: 'announcement',
+    }).sort({ createdAt: -1 });
 
     res.json(announcements);
   } catch (error) {
