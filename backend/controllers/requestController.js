@@ -258,3 +258,22 @@ export const actionRequest = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// ─────────────────────────────────────────────
+// GET /request/pending — Pending requests for the logged-in user
+// ─────────────────────────────────────────────
+export const getMyPendingRequests = async (req, res) => {
+  try {
+    const requests = await ApprovalRequest.find({
+      requestedBy: req.user._id,
+      overallStatus: 'pending'
+    })
+      .select('title type overallStatus createdAt')
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

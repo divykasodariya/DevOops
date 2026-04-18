@@ -10,6 +10,8 @@ import authRoutes from './routes/auth.js';
 import professorRoutes from './routes/professor.js';
 import requestRoutes from './routes/request.js';
 import scheduleRoutes from './routes/schedule.js';
+import attendanceRoutes from './routes/attendance.js';
+import notificationRoutes from './routes/notification.js';
 
 dotenv.config({});
 
@@ -41,6 +43,8 @@ app.use('/auth', authRoutes);
 app.use('/prof', professorRoutes);
 app.use('/request', requestRoutes);
 app.use('/schedule', scheduleRoutes);
+app.use('/attendance', attendanceRoutes);
+app.use('/notifications', notificationRoutes);
 
 const server = http.createServer(app);
 

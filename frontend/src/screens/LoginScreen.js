@@ -21,7 +21,7 @@ import { API_BASE } from '../config/api';
 export default function LoginScreen() {
   const router = useRouter();
   const { role } = useLocalSearchParams();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -53,6 +53,9 @@ export default function LoginScreen() {
       }
 
       await AsyncStorage.setItem('user', JSON.stringify(data));
+      if (data.token) {
+        await AsyncStorage.setItem('token', data.token);
+      }
 
       router.replace('/dashboard');
     } catch (err) {
@@ -95,7 +98,7 @@ export default function LoginScreen() {
                   <Text style={styles.forgotText}>Forgot?</Text>
                 </TouchableOpacity>
               </View>
-              
+
               <InputField
                 value={password}
                 onChangeText={(text) => { setPassword(text); setError(''); }}
@@ -119,8 +122,8 @@ export default function LoginScreen() {
                 <View style={styles.divider} />
               </View>
 
-              <TouchableOpacity 
-                style={styles.ssoButton} 
+              <TouchableOpacity
+                style={styles.ssoButton}
                 activeOpacity={0.8}
                 onPress={() => router.push({ pathname: '/register', params: { role } })}
               >
