@@ -1,22 +1,5 @@
-import { View, Text, StyleSheet } from "react-native";
+import StudentDashboard from "../src/screens/StudentDashboard";
 
-export default function DashboardScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Dashboard Working 🚀</Text>
-    </View>
-  );
+export default function Dashboard() {
+  return <StudentDashboard />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#1A1008",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  text: {
-    color: "white",
-    fontSize: 20,
-  },
-});

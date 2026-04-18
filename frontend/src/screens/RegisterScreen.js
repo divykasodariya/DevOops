@@ -7,8 +7,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  SafeAreaView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -77,12 +77,20 @@ export default function RegisterScreen() {
         return;
       }
 
+      // Save user and token to AsyncStorage
+      await AsyncStorage.setItem('user', JSON.stringify(data));
+      if (data.token) {
+        await AsyncStorage.setItem('token', data.token);
+      }
+
       // Step 2: If Faculty, set up profile
-      if (isFaculty) {
+      if (isFaculty && data.token) {
          const profRes = await fetch(`${API_BASE}/prof/setup`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.token}`
+            },
             body: JSON.stringify({
                department: department.trim(),
                position: position.trim(),
@@ -99,10 +107,15 @@ export default function RegisterScreen() {
          }
       }
 
-      // Save user to AsyncStorage
-      await AsyncStorage.setItem('user', JSON.stringify(data));
-
-      router.replace('/dashboard');
+      // Role-based routing
+      const userRole = data.role || role || 'student';
+      if (userRole === 'faculty' || userRole === 'hod') {
+        router.replace('/faculty-dashboard');
+      } else if (userRole === 'admin' || userRole === 'principal') {
+        router.replace('/admin-dashboard');
+      } else {
+        router.replace('/dashboard');
+      }
     } catch (err) {
       setError('Network error. Is the server running?');
     } finally {

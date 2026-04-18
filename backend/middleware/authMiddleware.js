@@ -4,8 +4,14 @@ import User from '../models/User.js';
 export const protect = async (req, res, next) => {
   let token;
 
+  // Check cookie first
   if (req.cookies.jwt) {
     token = req.cookies.jwt;
+  }
+
+  // Fallback: check Authorization header (for React Native)
+  if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
   }
 
   if (!token) {
