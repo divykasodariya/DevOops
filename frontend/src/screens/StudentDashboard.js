@@ -330,7 +330,7 @@ export default function StudentDashboard() {
           <Feather name="home" size={22} color={GOLD} />
           <Text style={[styles.navLbl, { color: GOLD }]}>HOME</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/schedule')}>
           <Feather name="calendar" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>SCHEDULE</Text>
         </TouchableOpacity>
