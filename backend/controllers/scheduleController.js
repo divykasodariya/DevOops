@@ -1,31 +1,125 @@
+import mongoose from 'mongoose';
 import { Schedule } from '../models/Schedule.js';
 import { Notification } from '../models/Notification.js';
+
+const SCHEDULE_TYPES = ['class', 'exam', 'event', 'room_booking', 'club'];
+
+const isOid = (v) =>
+  mongoose.Types.ObjectId.isValid(v) && String(new mongoose.Types.ObjectId(v)) === String(v);
+
+/** Map chatbot / loose client values to valid enum + safe refs */
+function normalizeScheduleBody(body, userId) {
+  let {
+    title,
+    type,
+    course,
+    room,
+    location,
+    department,
+    start,
+    end,
+    audience,
+    audienceIds,
+  } = body;
+
+  const rawType = String(type || '').toLowerCase().trim().replace(/-/g, '_');
+  const typeAliases = {
+    booking: 'room_booking',
+    book: 'room_booking',
+    reservation: 'room_booking',
+    room: 'room_booking',
+    room_booking: 'room_booking',
+    study: 'room_booking',
+  };
+  let normType = typeAliases[rawType] || rawType;
+  if (!SCHEDULE_TYPES.includes(normType)) {
+    normType = room || location ? 'room_booking' : 'event';
+  }
+
+  if (!title || !String(title).trim()) {
+    title = room ? `Booking — ${room}` : normType === 'class' ? 'Class session' : 'Campus booking';
+  } else {
+    title = String(title).trim();
+  }
+
+  if (!start || !end) {
+    return { error: 'start and end are required (ISO 8601 datetime strings).' };
+  }
+  const startAt = new Date(start);
+  const endAt = new Date(end);
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+    return {
+      error: 'Invalid start or end datetime. Use ISO 8601 (e.g. 2026-04-19T14:00:00.000Z).',
+    };
+  }
+  if (endAt <= startAt) {
+    return { error: 'end must be after start.' };
+  }
+
+  if (course != null && course !== '' && !isOid(course)) {
+    course = undefined;
+  }
+  if (department != null && department !== '' && !isOid(department)) {
+    department = undefined;
+  }
+
+  if (!audience || !String(audience).trim()) {
+    if (normType === 'room_booking') audience = 'user';
+    else if (normType === 'event') audience = 'all';
+    else audience = 'course';
+  }
+
+  if (normType === 'room_booking') {
+    if (!Array.isArray(audienceIds) || audienceIds.length === 0) {
+      audienceIds = [userId];
+    }
+  }
+
+  return {
+    payload: {
+      title,
+      type: normType,
+      course,
+      room: room != null ? String(room).trim() : undefined,
+      location: location != null ? String(location).trim() : undefined,
+      department,
+      start: startAt,
+      end: endAt,
+      audience,
+      audienceIds,
+    },
+  };
+}
 
 // ─────────────────────────────────────────────
 // POST /schedule — Create a schedule entry with clash detection
 // ─────────────────────────────────────────────
 export const createSchedule = async (req, res) => {
   try {
-    const { title, type, course, room, location, department, start, end, audience, audienceIds } = req.body;
+    const normalized = normalizeScheduleBody(req.body, req.user._id);
+    if (normalized.error) {
+      return res.status(400).json({ message: normalized.error });
+    }
 
-    // Run clash detection query BEFORE saving
+    const { title, type, course, room, location, department, start, end, audience, audienceIds } =
+      normalized.payload;
+
     let clashConflicts = [];
 
     if (room) {
       const clashes = await Schedule.find({
         room,
         isActive: true,
-        start: { $lt: new Date(end) },
-        end: { $gt: new Date(start) },
+        start: { $lt: end },
+        end: { $gt: start },
       });
 
-      clashConflicts = clashes.map(clash => ({
+      clashConflicts = clashes.map((clash) => ({
         conflictingScheduleId: clash._id,
         reason: 'same room',
       }));
     }
 
-    // Save anyway — let the user decide
     const schedule = await Schedule.create({
       title,
       type,
@@ -33,8 +127,8 @@ export const createSchedule = async (req, res) => {
       room,
       location,
       department,
-      start: new Date(start),
-      end: new Date(end),
+      start,
+      end,
       audience,
       audienceIds,
       clashChecked: true,
@@ -42,12 +136,10 @@ export const createSchedule = async (req, res) => {
       createdBy: req.user._id,
     });
 
-    // If clashes exist, return a warning alongside the saved document
     if (clashConflicts.length > 0) {
-      // Notify the creator about the clash
       await Notification.create({
         recipient: req.user._id,
-        title: '⚠️ Schedule Clash Detected',
+        title: 'Schedule clash detected',
         body: `${room} is already booked during your requested time (${clashConflicts.length} conflict${clashConflicts.length > 1 ? 's' : ''}).`,
         type: 'schedule_alert',
         refModel: 'Schedule',
@@ -55,7 +147,7 @@ export const createSchedule = async (req, res) => {
       });
 
       return res.status(201).json({
-        warning: `⚠️ Room ${room} has ${clashConflicts.length} clash(es) during this time slot.`,
+        warning: `Room ${room} has ${clashConflicts.length} clash(es) during this time slot.`,
         clashes: clashConflicts,
         schedule,
       });
@@ -63,6 +155,9 @@ export const createSchedule = async (req, res) => {
 
     res.status(201).json({ schedule });
   } catch (error) {
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ message: error.message });
+    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -146,11 +241,17 @@ export const getFreeSlots = async (req, res) => {
       return res.status(400).json({ message: 'room and date query params are required' });
     }
 
-    // Build the day boundaries: 8am to 6pm
-    const dayStart = new Date(`${date}T08:00:00`);
-    const dayEnd = new Date(`${date}T18:00:00`);
+    const dateStr = String(date).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return res.status(400).json({ message: 'date must be YYYY-MM-DD (e.g. 2026-04-19).' });
+    }
 
-    // Get all bookings for this room on this day
+    const dayStart = new Date(`${dateStr}T08:00:00`);
+    const dayEnd = new Date(`${dateStr}T18:00:00`);
+    if (Number.isNaN(dayStart.getTime()) || Number.isNaN(dayEnd.getTime())) {
+      return res.status(400).json({ message: 'Invalid date.' });
+    }
+
     const bookings = await Schedule.find({
       room,
       isActive: true,
@@ -158,19 +259,15 @@ export const getFreeSlots = async (req, res) => {
       end: { $gt: dayStart },
     }).sort({ start: 1 });
 
-    // Gap-finding logic: walk from 8am to 6pm in 1-hour increments
     const freeSlots = [];
     let cursor = dayStart.getTime();
-    const slotDuration = 60 * 60 * 1000; // 1 hour in ms
+    const slotDuration = 60 * 60 * 1000;
 
     while (cursor + slotDuration <= dayEnd.getTime()) {
       const slotStart = new Date(cursor);
       const slotEnd = new Date(cursor + slotDuration);
 
-      // Check if this slot overlaps any existing booking
-      const isOccupied = bookings.some(
-        b => b.start < slotEnd && b.end > slotStart
-      );
+      const isOccupied = bookings.some((b) => b.start < slotEnd && b.end > slotStart);
 
       if (!isOccupied) {
         freeSlots.push({

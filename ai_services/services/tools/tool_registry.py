@@ -27,8 +27,12 @@ TOOLS = {
         "description": "Get my upcoming classes, exams, and events",
         "params": [],
     },
+    "list_bookable_spaces": {
+        "description": "List all reservable study/rehearsal spaces and their official room IDs",
+        "params": [],
+    },
     "check_free_slots": {
-        "description": "Check free room slots for a given room and date",
+        "description": "Check free 1-hour slots for a room on YYYY-MM-DD (room id from list_bookable_spaces)",
         "params": ["room", "date"],
     },
     "create_schedule": {
