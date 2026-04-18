@@ -1,0 +1,316 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.w{padding:16px 0 24px;font-family:var(--font-sans);font-size:13px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.tab{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--color-border-secondary);color:var(--color-text-secondary);background:transparent;transition:all .15s}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary)}
+.pane{display:none}.pane.on{display:block}
+.section{margin-bottom:20px}
+.section-label{font-size:10px;font-weight:500;color:var(--color-text-tertiary);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.label-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.card{border:0.5px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden;margin-bottom:6px}
+.card-head{display:grid;grid-template-columns:28px 1fr 1fr 1fr;gap:0;align-items:stretch}
+.col-head{padding:7px 10px;font-size:10px;font-weight:500;color:var(--color-text-tertiary);background:var(--color-background-secondary);border-bottom:0.5px solid var(--color-border-tertiary);letter-spacing:.04em;text-transform:uppercase}
+.row{display:grid;grid-template-columns:28px 1fr 1fr 1fr;border-top:0.5px solid var(--color-border-tertiary)}
+.row:first-child{border-top:none}
+.cell{padding:9px 10px;font-size:12px;color:var(--color-text-primary);line-height:1.5;display:flex;align-items:center}
+.cell.muted{color:var(--color-text-secondary)}
+.cell.mono{font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary)}
+.num{background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--color-text-tertiary);border-right:0.5px solid var(--color-border-tertiary)}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;white-space:nowrap}
+.nav-box{background:var(--color-background-secondary);border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.nav-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px}
+.nav-row{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;color:var(--color-text-secondary)}
+.arrow{color:var(--color-text-tertiary);font-size:11px}
+.flow-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px}
+.flow-col{background:var(--color-background-secondary);border-radius:8px;padding:10px;border:0.5px solid var(--color-border-tertiary)}
+.flow-col-title{font-size:11px;font-weight:500;margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--color-border-tertiary)}
+.flow-item{font-size:11px;color:var(--color-text-secondary);padding:3px 0;line-height:1.5;display:flex;align-items:center;gap:5px}
+.di{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px;margin-bottom:16px}
+.sum-card{background:var(--color-background-secondary);border-radius:8px;padding:10px 12px;text-align:center}
+.sum-num{font-size:22px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.sum-label{font-size:10px;color:var(--color-text-tertiary);margin-top:4px}
+</style>
+
+<div class="w">
+<div class="tabs">
+  <button class="tab on" onclick="sp(0,this)">All screens</button>
+  <button class="tab" onclick="sp(1,this)">Auth flow</button>
+  <button class="tab" onclick="sp(2,this)">Student</button>
+  <button class="tab" onclick="sp(3,this)">Faculty</button>
+  <button class="tab" onclick="sp(4,this)">Admin</button>
+  <button class="tab" onclick="sp(5,this)">Shared</button>
+  <button class="tab" onclick="sp(6,this)">Navigation map</button>
+</div>
+
+<!-- ALL SCREENS -->
+<div class="pane on" id="p0">
+  <div class="summary-grid">
+    <div class="sum-card"><div class="sum-num">3</div><div class="sum-label">Auth screens</div></div>
+    <div class="sum-card"><div class="sum-num">5</div><div class="sum-label">Student screens</div></div>
+    <div class="sum-card"><div class="sum-num">4</div><div class="sum-label">Faculty screens</div></div>
+    <div class="sum-card"><div class="sum-num">3</div><div class="sum-label">Admin screens</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="col-head">#</div>
+      <div class="col-head">Your zip folder</div>
+      <div class="col-head">Screen file (.tsx)</div>
+      <div class="col-head">Role / type</div>
+    </div>
+
+    <div class="row"><div class="num">1</div><div class="cell mono">splash_screen/</div><div class="cell mono">SplashScreen.tsx</div><div class="cell"><span class="badge" style="background:#FBEAF0;color:#72243E">Auth</span></div></div>
+    <div class="row"><div class="num">2</div><div class="cell mono">login/</div><div class="cell mono">LoginScreen.tsx</div><div class="cell"><span class="badge" style="background:#FBEAF0;color:#72243E">Auth</span></div></div>
+    <div class="row"><div class="num">3</div><div class="cell mono">role_selection/</div><div class="cell mono">RoleSelectionScreen.tsx</div><div class="cell"><span class="badge" style="background:#FBEAF0;color:#72243E">Auth</span></div></div>
+
+    <div class="row"><div class="num">4</div><div class="cell mono">student_dashboard/</div><div class="cell mono">StudentDashboard.tsx</div><div class="cell"><span class="badge" style="background:#E1F5EE;color:#085041">Student</span></div></div>
+    <div class="row"><div class="num">5</div><div class="cell mono">calendar_schedule/</div><div class="cell mono">ScheduleScreen.tsx</div><div class="cell"><span class="badge" style="background:#E1F5EE;color:#085041">Student</span></div></div>
+    <div class="row"><div class="num">6</div><div class="cell mono">room_booking/</div><div class="cell mono">RoomBookingScreen.tsx</div><div class="cell"><span class="badge" style="background:#E1F5EE;color:#085041">Student</span></div></div>
+    <div class="row"><div class="num">7</div><div class="cell mono">payments_settlement/</div><div class="cell mono">PaymentsScreen.tsx</div><div class="cell"><span class="badge" style="background:#E1F5EE;color:#085041">Student</span></div></div>
+    <div class="row"><div class="num">8</div><div class="cell mono">approvals_workflow/</div><div class="cell mono">ApprovalStatusScreen.tsx</div><div class="cell"><span class="badge" style="background:#E1F5EE;color:#085041">Student</span></div></div>
+
+    <div class="row"><div class="num">9</div><div class="cell mono">faculty_dashboard_1/</div><div class="cell mono">FacultyDashboard.tsx</div><div class="cell"><span class="badge" style="background:#E6F1FB;color:#0C447C">Faculty</span></div></div>
+    <div class="row"><div class="num">10</div><div class="cell mono">faculty_dashboard_2/</div><div class="cell mono" style="font-size:10px">FacultyDashboard.tsx (part 2)</div><div class="cell"><span class="badge" style="background:#E6F1FB;color:#0C447C">Faculty</span></div></div>
+    <div class="row"><div class="num">11</div><div class="cell mono">approvals_workflow/</div><div class="cell mono">ApprovalsPanel.tsx</div><div class="cell"><span class="badge" style="background:#E6F1FB;color:#0C447C">Faculty</span></div></div>
+    <div class="row"><div class="num">12</div><div class="cell mono">notice_publisher/</div><div class="cell mono">NoticePublisher.tsx</div><div class="cell"><span class="badge" style="background:#E6F1FB;color:#0C447C">Faculty</span></div></div>
+
+    <div class="row"><div class="num">13</div><div class="cell mono">admin_dashboard/</div><div class="cell mono">AdminDashboard.tsx</div><div class="cell"><span class="badge" style="background:#FAEEDA;color:#633806">Admin</span></div></div>
+    <div class="row"><div class="num">14</div><div class="cell mono">analytics_dashboard/</div><div class="cell mono">AnalyticsScreen.tsx</div><div class="cell"><span class="badge" style="background:#FAEEDA;color:#633806">Admin</span></div></div>
+    <div class="row"><div class="num">15</div><div class="cell mono">approvals_workflow/</div><div class="cell mono">AdminApprovalsScreen.tsx</div><div class="cell"><span class="badge" style="background:#FAEEDA;color:#633806">Admin</span></div></div>
+
+    <div class="row"><div class="num">16</div><div class="cell mono">ai_copilot_chat/</div><div class="cell mono">AICopilotChat.tsx</div><div class="cell"><span class="badge" style="background:#F1EFE8;color:#444441">All roles</span></div></div>
+    <div class="row"><div class="num">17</div><div class="cell mono">profile_settings/</div><div class="cell mono">ProfileSettings.tsx</div><div class="cell"><span class="badge" style="background:#F1EFE8;color:#444441">All roles</span></div></div>
+
+    <div class="row"><div class="num">18</div><div class="cell mono">aether_elite/</div><div class="cell mono">AetherElite.tsx</div><div class="cell"><span class="badge" style="background:#F1EFE8;color:#444441">Bonus</span></div></div>
+  </div>
+</div>
+
+<!-- AUTH FLOW -->
+<div class="pane" id="p1">
+  <div class="section-label"><div class="label-dot" style="background:#D4537E"></div>Auth flow — 3 screens, everyone passes through these</div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="col-head">#</div>
+      <div class="col-head">Folder → File</div>
+      <div class="col-head">Path in project</div>
+      <div class="col-head">What it does</div>
+    </div>
+    <div class="row"><div class="num">1</div><div class="cell"><div><div style="font-weight:500">SplashScreen</div><div class="muted" style="font-size:11px;color:var(--color-text-tertiary)">splash_screen/ → SplashScreen.tsx</div></div></div><div class="cell mono" style="font-size:10px">src/screens/auth/</div><div class="cell muted">Gold "A" logo + tagline. Shows for 2s then auto-navigates to Login.</div></div>
+    <div class="row"><div class="num">2</div><div class="cell"><div><div style="font-weight:500">LoginScreen</div><div class="muted" style="font-size:11px;color:var(--color-text-tertiary)">login/ → LoginScreen.tsx</div></div></div><div class="cell mono" style="font-size:10px">src/screens/auth/</div><div class="cell muted">Email + password form for ALL roles (student, faculty, admin). One screen, no role dropdown.</div></div>
+    <div class="row"><div class="num">3</div><div class="cell"><div><div style="font-weight:500">RoleSelectionScreen</div><div class="muted" style="font-size:11px;color:var(--color-text-tertiary)">role_selection/ → RoleSelectionScreen.tsx</div></div></div><div class="cell mono" style="font-size:10px">src/screens/auth/</div><div class="cell muted">Shows after login. Displays 3 cards. Routes to StudentNavigator, FacultyNavigator, or AdminNavigator based on backend role.</div></div>
+  </div>
+
+  <div class="nav-box" style="margin-top:12px">
+    <div class="nav-title">Flow</div>
+    <div class="nav-row"><span style="background:#FBEAF0;color:#72243E;padding:2px 8px;border-radius:4px;font-size:11px">Splash</span><span class="arrow">→ 2s delay →</span><span style="background:#FBEAF0;color:#72243E;padding:2px 8px;border-radius:4px;font-size:11px">Login</span><span class="arrow">→ submit →</span><span style="background:#FBEAF0;color:#72243E;padding:2px 8px;border-radius:4px;font-size:11px">RoleSelection</span><span class="arrow">→ role detected →</span><span style="font-size:11px;color:var(--color-text-secondary)">Dashboard</span></div>
+  </div>
+</div>
+
+<!-- STUDENT -->
+<div class="pane" id="p2">
+  <div class="section-label"><div class="label-dot" style="background:#1D9E75"></div>Student — 5 screens + 2 shared</div>
+  <div class="card">
+    <div class="card-head">
+      <div class="col-head">#</div>
+      <div class="col-head">Folder → File</div>
+      <div class="col-head">Path in project</div>
+      <div class="col-head">Tab / how reached</div>
+    </div>
+    <div class="row"><div class="num">1</div><div class="cell"><div><div style="font-weight:500">StudentDashboard</div><div style="font-size:11px;color:var(--color-text-tertiary)">student_dashboard/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/student/</div><div class="cell muted">Home tab (tab 1). First screen after login.</div></div>
+    <div class="row"><div class="num">2</div><div class="cell"><div><div style="font-weight:500">ScheduleScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">calendar_schedule/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/student/</div><div class="cell muted">Schedule tab (tab 2). Calendar + event list.</div></div>
+    <div class="row"><div class="num">3</div><div class="cell"><div><div style="font-weight:500">RoomBookingScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">room_booking/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/student/</div><div class="cell muted">FAB menu → "Book Room". Stack screen (not a tab).</div></div>
+    <div class="row"><div class="num">4</div><div class="cell"><div><div style="font-weight:500">PaymentsScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">payments_settlement/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/student/</div><div class="cell muted">FAB menu → "Pay Fees". Stack screen.</div></div>
+    <div class="row"><div class="num">5</div><div class="cell"><div><div style="font-weight:500">ApprovalStatusScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">approvals_workflow/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/student/</div><div class="cell muted">Dashboard → Pending Tasks → view status. Stack screen.</div></div>
+    <div class="row"><div class="num">6</div><div class="cell"><div><div style="font-weight:500">AICopilotChat</div><div style="font-size:11px;color:var(--color-text-tertiary)">ai_copilot_chat/ (shared)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">FAB center tab (tab 3). All roles.</div></div>
+    <div class="row"><div class="num">7</div><div class="cell"><div><div style="font-weight:500">ProfileSettings</div><div style="font-size:11px;color:var(--color-text-tertiary)">profile_settings/ (shared)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Profile tab (tab 5). All roles.</div></div>
+  </div>
+
+  <div class="nav-box" style="margin-top:10px">
+    <div class="nav-title">Student bottom tab bar</div>
+    <div class="nav-row">
+      <span style="background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:4px;font-size:11px">Home</span>
+      <span class="arrow">·</span>
+      <span style="background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:4px;font-size:11px">Schedule</span>
+      <span class="arrow">·</span>
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">FAB ⊕</span>
+      <span class="arrow">·</span>
+      <span style="background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:4px;font-size:11px">Chat</span>
+      <span class="arrow">·</span>
+      <span style="background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:4px;font-size:11px">Profile</span>
+    </div>
+  </div>
+</div>
+
+<!-- FACULTY -->
+<div class="pane" id="p3">
+  <div class="section-label"><div class="label-dot" style="background:#378ADD"></div>Faculty — 4 screens + 2 shared</div>
+  <div class="card">
+    <div class="card-head">
+      <div class="col-head">#</div>
+      <div class="col-head">Folder → File</div>
+      <div class="col-head">Path in project</div>
+      <div class="col-head">Tab / how reached</div>
+    </div>
+    <div class="row"><div class="num">1</div><div class="cell"><div><div style="font-weight:500">FacultyDashboard</div><div style="font-size:11px;color:var(--color-text-tertiary)">faculty_dashboard_1/ + faculty_dashboard_2/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/faculty/</div><div class="cell muted">Home tab. Merge both folders into ONE component. Part 1 = top half, Part 2 = bottom half/scrolled.</div></div>
+    <div class="row"><div class="num">2</div><div class="cell"><div><div style="font-weight:500">ApprovalsPanel</div><div style="font-size:11px;color:var(--color-text-tertiary)">approvals_workflow/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/faculty/</div><div class="cell muted">Approvals tab (tab 2). Faculty approves/rejects leave requests.</div></div>
+    <div class="row"><div class="num">3</div><div class="cell"><div><div style="font-weight:500">NoticePublisher</div><div style="font-size:11px;color:var(--color-text-tertiary)">notice_publisher/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/faculty/</div><div class="cell muted">Notices tab (tab 3). Post notices to students.</div></div>
+    <div class="row"><div class="num">4</div><div class="cell"><div><div style="font-weight:500">ScheduleScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">calendar_schedule/ (reused)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Schedule tab (tab 4). Reuse same component as student. Pass role prop.</div></div>
+    <div class="row"><div class="num">5</div><div class="cell"><div><div style="font-weight:500">AICopilotChat</div><div style="font-size:11px;color:var(--color-text-tertiary)">ai_copilot_chat/ (shared)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">FAB center or Chat tab. All roles.</div></div>
+    <div class="row"><div class="num">6</div><div class="cell"><div><div style="font-weight:500">ProfileSettings</div><div style="font-size:11px;color:var(--color-text-tertiary)">profile_settings/ (shared)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Profile tab (tab 5). All roles.</div></div>
+  </div>
+
+  <div class="nav-box" style="margin-top:10px">
+    <div class="nav-title">Faculty bottom tab bar</div>
+    <div class="nav-row">
+      <span style="background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:4px;font-size:11px">Home</span>
+      <span class="arrow">·</span>
+      <span style="background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:4px;font-size:11px">Approvals</span>
+      <span class="arrow">·</span>
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">FAB ⊕</span>
+      <span class="arrow">·</span>
+      <span style="background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:4px;font-size:11px">Notices</span>
+      <span class="arrow">·</span>
+      <span style="background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:4px;font-size:11px">Profile</span>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="pane" id="p4">
+  <div class="section-label"><div class="label-dot" style="background:#EF9F27"></div>Admin — 3 screens + 2 shared</div>
+  <div class="card">
+    <div class="card-head">
+      <div class="col-head">#</div>
+      <div class="col-head">Folder → File</div>
+      <div class="col-head">Path in project</div>
+      <div class="col-head">Tab / how reached</div>
+    </div>
+    <div class="row"><div class="num">1</div><div class="cell"><div><div style="font-weight:500">AdminDashboard</div><div style="font-size:11px;color:var(--color-text-tertiary)">admin_dashboard/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/admin/</div><div class="cell muted">Home tab. KPI cards, heatmap, resource usage.</div></div>
+    <div class="row"><div class="num">2</div><div class="cell"><div><div style="font-weight:500">AnalyticsScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">analytics_dashboard/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/admin/</div><div class="cell muted">Analytics tab (tab 2). Line + bar charts, gold on dark grid.</div></div>
+    <div class="row"><div class="num">3</div><div class="cell"><div><div style="font-weight:500">AdminApprovalsScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">approvals_workflow/ (reused)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/admin/</div><div class="cell muted">Approvals tab (tab 3). Same component as faculty approvals, pass role='admin' prop.</div></div>
+    <div class="row"><div class="num">4</div><div class="cell"><div><div style="font-weight:500">AICopilotChat</div><div style="font-size:11px;color:var(--color-text-tertiary)">ai_copilot_chat/ (shared)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Chat tab. All roles.</div></div>
+    <div class="row"><div class="num">5</div><div class="cell"><div><div style="font-weight:500">ProfileSettings</div><div style="font-size:11px;color:var(--color-text-tertiary)">profile_settings/ (shared)</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Profile tab (tab 5). All roles.</div></div>
+  </div>
+
+  <div class="nav-box" style="margin-top:10px">
+    <div class="nav-title">Admin bottom tab bar</div>
+    <div class="nav-row">
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">Dashboard</span>
+      <span class="arrow">·</span>
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">Analytics</span>
+      <span class="arrow">·</span>
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">FAB ⊕</span>
+      <span class="arrow">·</span>
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">Approvals</span>
+      <span class="arrow">·</span>
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">Profile</span>
+    </div>
+  </div>
+</div>
+
+<!-- SHARED -->
+<div class="pane" id="p5">
+  <div class="section-label"><div class="label-dot" style="background:#888780"></div>Shared screens — built once, used by all 3 roles</div>
+  <div class="card">
+    <div class="card-head">
+      <div class="col-head">#</div>
+      <div class="col-head">Folder → File</div>
+      <div class="col-head">Path in project</div>
+      <div class="col-head">Used by</div>
+    </div>
+    <div class="row"><div class="num">1</div><div class="cell"><div><div style="font-weight:500">AICopilotChat</div><div style="font-size:11px;color:var(--color-text-tertiary)">ai_copilot_chat/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Student · Faculty · Admin</div></div>
+    <div class="row"><div class="num">2</div><div class="cell"><div><div style="font-weight:500">ProfileSettings</div><div style="font-size:11px;color:var(--color-text-tertiary)">profile_settings/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Student · Faculty · Admin</div></div>
+    <div class="row"><div class="num">3</div><div class="cell"><div><div style="font-weight:500">ApprovalsScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">approvals_workflow/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Faculty (manage) · Admin (manage) · Student (view status only)</div></div>
+    <div class="row"><div class="num">4</div><div class="cell"><div><div style="font-weight:500">ScheduleScreen</div><div style="font-size:11px;color:var(--color-text-tertiary)">calendar_schedule/</div></div></div><div class="cell mono" style="font-size:10px">src/screens/shared/</div><div class="cell muted">Student (view) · Faculty (manage classes)</div></div>
+  </div>
+
+  <div class="nav-box" style="margin-top:10px">
+    <div class="nav-title">How to reuse with props</div>
+    <div class="nav-row" style="font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary)">
+      &lt;ApprovalsScreen role="faculty" /&gt; &nbsp;→ shows Approve/Reject buttons
+    </div>
+    <div class="nav-row" style="font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);margin-top:4px">
+      &lt;ApprovalsScreen role="student" /&gt; &nbsp;→ shows status only (read-only)
+    </div>
+  </div>
+</div>
+
+<!-- NAV MAP -->
+<div class="pane" id="p6">
+  <div class="section-label">Complete navigation structure</div>
+
+  <div class="nav-box">
+    <div class="nav-title" style="font-size:11px;color:var(--color-text-tertiary)">RootNavigator.tsx</div>
+    <div class="nav-row" style="margin-top:4px">
+      <span style="font-family:var(--font-mono);font-size:11px">isLoggedIn = false</span>
+      <span class="arrow">→</span>
+      <span style="background:#FBEAF0;color:#72243E;padding:2px 8px;border-radius:4px;font-size:11px">AuthNavigator</span>
+    </div>
+    <div class="nav-row" style="margin-left:20px;margin-top:3px;font-family:var(--font-mono);font-size:10px;color:var(--color-text-tertiary)">
+      Splash → Login → RoleSelection
+    </div>
+    <div class="nav-row" style="margin-top:6px">
+      <span style="font-family:var(--font-mono);font-size:11px">role = 'student'</span>
+      <span class="arrow">→</span>
+      <span style="background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:4px;font-size:11px">StudentNavigator</span>
+    </div>
+    <div class="nav-row" style="margin-top:4px">
+      <span style="font-family:var(--font-mono);font-size:11px">role = 'faculty'</span>
+      <span class="arrow">→</span>
+      <span style="background:#E6F1FB;color:#0C447C;padding:2px 8px;border-radius:4px;font-size:11px">FacultyNavigator</span>
+    </div>
+    <div class="nav-row" style="margin-top:4px">
+      <span style="font-family:var(--font-mono);font-size:11px">role = 'admin'</span>
+      <span class="arrow">→</span>
+      <span style="background:#FAEEDA;color:#633806;padding:2px 8px;border-radius:4px;font-size:11px">AdminNavigator</span>
+    </div>
+  </div>
+
+  <div class="flow-grid" style="margin-top:10px">
+    <div class="flow-col">
+      <div class="flow-col-title" style="color:#085041">StudentNavigator</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Home → StudentDashboard</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Schedule → ScheduleScreen</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>FAB → Chat / Book / Pay</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Chat → AICopilotChat</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Profile → ProfileSettings</div>
+      <div class="flow-item" style="margin-top:4px;padding-top:4px;border-top:0.5px solid var(--color-border-tertiary)"><div class="di" style="background:#A89070"></div>Stack: RoomBooking</div>
+      <div class="flow-item"><div class="di" style="background:#A89070"></div>Stack: Payments</div>
+      <div class="flow-item"><div class="di" style="background:#A89070"></div>Stack: ApprovalStatus</div>
+    </div>
+    <div class="flow-col">
+      <div class="flow-col-title" style="color:#0C447C">FacultyNavigator</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Home → FacultyDashboard</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Approvals → ApprovalsPanel</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>FAB → Post Notice / Mark</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Notices → NoticePublisher</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Profile → ProfileSettings</div>
+      <div class="flow-item" style="margin-top:4px;padding-top:4px;border-top:0.5px solid var(--color-border-tertiary)"><div class="di" style="background:#A89070"></div>Stack: Schedule</div>
+      <div class="flow-item"><div class="di" style="background:#A89070"></div>Stack: AICopilotChat</div>
+    </div>
+    <div class="flow-col">
+      <div class="flow-col-title" style="color:#633806">AdminNavigator</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Home → AdminDashboard</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Analytics → AnalyticsScreen</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>FAB → Add User / Report</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Approvals → AdminApprovals</div>
+      <div class="flow-item"><div class="di" style="background:#F5D060"></div>Profile → ProfileSettings</div>
+      <div class="flow-item" style="margin-top:4px;padding-top:4px;border-top:0.5px solid var(--color-border-tertiary)"><div class="di" style="background:#A89070"></div>Stack: AICopilotChat</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function sp(i,el){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('p'+i).classList.add('on');
+  el.classList.add('on');
+}
+</script>
