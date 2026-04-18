@@ -9,6 +9,7 @@ import http from 'http'
 import authRoutes from './routes/auth.js';
 import professorRoutes from './routes/professor.js';
 import requestRoutes from './routes/request.js';
+import scheduleRoutes from './routes/schedule.js';
 
 dotenv.config({});
 
@@ -33,6 +34,7 @@ app.use(cors(corsOptions));
 app.use('/auth', authRoutes);
 app.use('/prof', professorRoutes);
 app.use('/request', requestRoutes);
+app.use('/schedule', scheduleRoutes);
 
 const server = http.createServer(app);
 
