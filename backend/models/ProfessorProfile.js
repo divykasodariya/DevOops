@@ -22,6 +22,11 @@ const professorProfileSchema = new mongoose.Schema({
   }],
   autoTags: [{
     type: String
+  }],
+
+  availability: [{
+    day: { type: String, enum: ['Mon','Tue','Wed','Thu','Fri','Sat'] },
+    slots: [String]
   }]
 }, { timestamps: true });
 

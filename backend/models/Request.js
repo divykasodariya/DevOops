@@ -30,9 +30,17 @@ const requestSchema = new mongoose.Schema({
   },
   stage: {
     type: String,
-    enum: ['pending', 'approved', 'rejected'],
+    enum: ['pending', 'approved', 'rejected', 'in_review'],
     default: 'pending'
   },
+  priority: { type: String, enum: ['low','medium','high'], default: 'medium' },
+  attachments: [{ url: String, label: String }],
+  approvalChain: [{
+    role: { type: String, enum: ['professor','hod','principal','admin'] },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: Date,
+    status: { type: String, enum: ['pending','approved','rejected'], default: 'pending' }
+  }],
   metadata: {
     tags: [String],
     dates: [Date],

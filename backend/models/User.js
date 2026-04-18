@@ -19,7 +19,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['student', 'professor', 'admin', 'club'],
     required: true
-  }
+  },
+  fcmToken: { type: String, default: null }
 }, { timestamps: true });
 
 // Hash password before saving
