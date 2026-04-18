@@ -23,6 +23,7 @@ class CopilotInput(BaseModel):
     department_id: Optional[str] = None
     input_mode: Literal["text", "voice"] = "text"
     history:    list[dict] = []             # [{role, content}, ...]
+    token:      Optional[str] = None        # JWT from Node backend for API calls
 
 
 class CopilotResponse(BaseModel):

@@ -13,6 +13,7 @@ import scheduleRoutes from './routes/schedule.js';
 import attendanceRoutes from './routes/attendance.js';
 import notificationRoutes from './routes/notification.js';
 import issueRoutes from './routes/issue.js';
+import aiRoutes from './routes/ai.js';
 
 dotenv.config({});
 
@@ -47,6 +48,7 @@ app.use('/schedule', scheduleRoutes);
 app.use('/attendance', attendanceRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/issues', issueRoutes);
+app.use('/ai', aiRoutes);
 
 const server = http.createServer(app);
 
