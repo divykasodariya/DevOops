@@ -4,6 +4,6 @@ import { setupProfile } from '../controllers/professorController.js';
 
 const router = express.Router();
 
-router.route('/setup').post(protect, authorize('professor'), setupProfile);
+router.route('/setup').post(protect, authorize('faculty'), setupProfile);
 
 export default router;

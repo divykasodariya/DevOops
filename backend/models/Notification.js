@@ -1,14 +1,30 @@
 import mongoose from 'mongoose';
 
-const notificationSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  type: { type: String, enum: ['request_update', 'announcement', 'reminder'], required: true },
-  title: { type: String, required: true },
-  body: { type: String },
-  refModel: { type: String, enum: ['Request', 'User'] },
-  refId: { type: mongoose.Schema.Types.ObjectId },
-  read: { type: Boolean, default: false }
-}, { timestamps: true });
+const { Schema, model } = mongoose;
 
-const Notification = mongoose.model('Notification', notificationSchema);
-export default Notification;
+const notificationSchema = new Schema(
+  {
+    recipient: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    title:     { type: String, required: true },
+    body:      String,
+    type: {
+      type: String,
+      enum: ['approval_action', 'schedule_alert', 'issue_update',
+             'payment_receipt', 'announcement', 'copilot_reminder'],
+    },
+
+    refModel: { type: String, enum: ['ApprovalRequest', 'Schedule', 'Issue', 'Payment'] },
+    refId:    { type: Schema.Types.ObjectId },
+
+    isRead:     { type: Boolean, default: false },
+    readAt:     Date,
+
+    pushSent:   { type: Boolean, default: false },
+    pushSentAt: Date,
+  },
+  { timestamps: true }
+);
+
+notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
+
+export const Notification = model('Notification', notificationSchema);
