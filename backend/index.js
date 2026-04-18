@@ -5,6 +5,11 @@ import connectDB from './config/database.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors'
 import http from 'http'
+
+import authRoutes from './routes/auth.js';
+import professorRoutes from './routes/professor.js';
+import requestRoutes from './routes/request.js';
+
 dotenv.config({});
 
 
@@ -25,6 +30,9 @@ const corsOptions = {
 }
 app.use(cors(corsOptions));
 
+app.use('/auth', authRoutes);
+app.use('/prof', professorRoutes);
+app.use('/request', requestRoutes);
 
 const server = http.createServer(app);
 
