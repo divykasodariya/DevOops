@@ -10,6 +10,8 @@ import {
   Dimensions,
   TextInput,
   Platform,
+  Linking,
+  Alert,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -176,6 +178,20 @@ export default function StudentDashboard() {
     return { n: 'bell', c: GOLD_DIM };
   };
 
+  const openAttachment = async (url) => {
+    if (!url) return;
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (!canOpen) {
+        Alert.alert('Unable to open file', 'This file link is not supported on your device.');
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Download failed', 'Please try again later.');
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.safe}>
@@ -300,6 +316,24 @@ export default function StudentDashboard() {
                     <Text style={styles.annBody} numberOfLines={3}>
                       {item.body}
                     </Text>
+                    {Array.isArray(item.attachments) && item.attachments.length > 0 && (
+                      <View style={styles.attachmentWrap}>
+                        <Text style={styles.attachmentLabel}>Materials</Text>
+                        {item.attachments.slice(0, 2).map((attachment, idx) => (
+                          <TouchableOpacity
+                            key={`${item._id}-${idx}`}
+                            onPress={() => openAttachment(attachment.url)}
+                            style={styles.attachmentBtn}
+                            activeOpacity={0.8}
+                          >
+                            <Feather name="download" size={13} color={GOLD} />
+                            <Text style={styles.attachmentBtnText} numberOfLines={1}>
+                              {attachment.fileName || 'Download file'}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 );
               }}
@@ -492,6 +526,34 @@ const styles = StyleSheet.create({
   annHead: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   annLabel: { fontFamily: FONTS.medium, fontSize: 13, color: TEXT_SECONDARY, flexShrink: 1 },
   annBody: { fontFamily: FONTS.regular, fontSize: 14, color: TEXT_PRIMARY, lineHeight: 22 },
+  attachmentWrap: {
+    marginTop: 2,
+    gap: 6,
+  },
+  attachmentLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: 11,
+    color: TEXT_MUTED,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  attachmentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1a1710',
+    borderWidth: 1,
+    borderColor: 'rgba(245,208,96,0.25)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  attachmentBtnText: {
+    flex: 1,
+    fontFamily: FONTS.medium,
+    fontSize: 12,
+    color: GOLD,
+  },
 
   askWrap: { position: 'absolute', bottom: ASK_BOTTOM, left: 16, right: 16 },
   askBox: {

@@ -15,6 +15,14 @@ const notificationSchema = new Schema(
 
     refModel: { type: String, enum: ['ApprovalRequest', 'Schedule', 'Issue', 'Payment'] },
     refId:    { type: Schema.Types.ObjectId },
+    attachments: [
+      {
+        fileName: { type: String, required: true },
+        url: { type: String, required: true },
+        mimeType: { type: String },
+        size: { type: Number },
+      },
+    ],
 
     isRead:     { type: Boolean, default: false },
     readAt:     Date,
