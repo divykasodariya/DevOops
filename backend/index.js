@@ -59,7 +59,7 @@ app.use('/ai', aiRoutes);
 
 const server = http.createServer(app);
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     connectDB();
     console.log(`Server is listening at port ${PORT}`);
 });

@@ -2,7 +2,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   Animated,
-  KeyboardAvoidingView,
+  Alert,
+  Keyboard,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,8 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
+import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -40,27 +43,15 @@ export default function AIAssistantScreen() {
   const initialInput = typeof params?.q === 'string' ? params.q : '';
   const didInitFromQuery = useRef(false);
   const scrollRef = useRef(null);
+  const recordingRef = useRef(null);
   const [input, setInput] = useState(initialInput);
   const [messages, setMessages] = useState([]);
   const [llmHistory, setLlmHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const keyboardDidHideListener = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
-
-    return () => {
-      keyboardDidHideListener.remove();
-      keyboardDidShowListener.remove();
-    };
-  }, []);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   // Dot animation for typing indicator
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -152,6 +143,38 @@ export default function AIAssistantScreen() {
     setInput('');
   }, [initialInput, messages.length]);
 
+  // Keyboard listeners
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (event) => {
+      setKeyboardVisible(true);
+      setKeyboardHeight(event?.endCoordinates?.height || 0);
+    };
+    const onHide = () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    };
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const rec = recordingRef.current;
+      if (rec) {
+        rec.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+    };
+  }, []);
+
   const canSend = useMemo(() => input.trim().length > 0 && !isLoading, [input, isLoading]);
 
   const scrollToEnd = useCallback(() => {
@@ -240,6 +263,89 @@ export default function AIAssistantScreen() {
     AsyncStorage.removeItem(CHAT_STORAGE_KEY).catch(() => {});
     AsyncStorage.removeItem(HISTORY_STORAGE_KEY).catch(() => {});
   };
+
+  const stopRecordingAndUpload = useCallback(async () => {
+    const rec = recordingRef.current;
+    recordingRef.current = null;
+    setIsRecording(false);
+    if (!rec) return;
+
+    try {
+      setIsTranscribing(true);
+      await rec.stopAndUnloadAsync();
+      const uri = rec.getURI();
+      if (!uri) {
+        Alert.alert('Recording', 'Could not read the recording file.');
+        return;
+      }
+
+      const token = await AsyncStorage.getItem('token');
+      // Native multipart upload — fetch()+FormData often throws "Network request failed" on Android.
+      const result = await FileSystem.uploadAsync(`${API_BASE}/ai/transcribe`, uri, {
+        httpMethod: 'POST',
+        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName:  'audio',
+        mimeType:   Platform.OS === 'android' ? 'audio/mp4' : 'audio/m4a',
+        headers:    token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      let data = {};
+      try {
+        data = result.body ? JSON.parse(result.body) : {};
+      } catch (_) {
+        data = {};
+      }
+      if (result.status < 200 || result.status >= 300) {
+        throw new Error(data.message || `Transcription failed (${result.status})`);
+      }
+      const text = (data.text || '').trim();
+      if (text) {
+        setInput((prev) => {
+          const next = prev.trim() ? `${prev.trim()} ${text}` : text;
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error('Transcribe error:', err);
+      Alert.alert('Transcription', err?.message || 'Could not transcribe audio. Try again.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, []);
+
+  const toggleMic = useCallback(async () => {
+    if (isTranscribing) return;
+    if (isRecording) {
+      await stopRecordingAndUpload();
+      return;
+    }
+    if (isLoading) return;
+
+    try {
+      const { status } = await Audio.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Microphone', 'Allow microphone access to use voice input.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS:     true,
+        playsInSilentModeIOS:   true,
+        staysActiveInBackground: false,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Recording start error:', err);
+      Alert.alert('Recording', err?.message || 'Could not start recording.');
+    }
+  }, [isRecording, isTranscribing, isLoading, stopRecordingAndUpload]);
+
+  const micDisabled = isTranscribing || (!isRecording && isLoading);
 
   return (
     <View style={styles.safe} edges={['top']}>
@@ -336,58 +442,39 @@ export default function AIAssistantScreen() {
             </View>
           </View>
         )}
-        </ScrollView>
-        <View style={styles.composerDock}>
-          <View style={styles.composerRow}>
+      </ScrollView>
+
+      <View
+        style={[
+          styles.composerDock,
+          { bottom: keyboardVisible ? keyboardHeight : NAV_H },
+        ]}
+      >
+        <View style={styles.composerRow}>
+          <TouchableOpacity style={styles.plusBtn} activeOpacity={0.75}>
+            <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
+          </TouchableOpacity>
+          <View style={styles.inputWrap}>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask Aether"
+              placeholderTextColor={TEXT_MUTED}
+              style={styles.input}
+              returnKeyType="send"
+              onSubmitEditing={handleSend}
+              editable={!isLoading}
+            />
             <TouchableOpacity
-              style={styles.plusBtn}
+              style={[styles.micBtn, isRecording && styles.micBtnRecording]}
+              onPress={toggleMic}
+              disabled={micDisabled}
               activeOpacity={0.75}
-              hitSlop={{
-                top: 10,
-                bottom: 10,
-                left: 10,
-                right: 10
-              }}>
-              <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
-            </TouchableOpacity>
-            <View style={styles.inputWrap}>
-              <TextInput
-                value={input}
-                onChangeText={setInput}
-                placeholder="Ask Aether"
-                placeholderTextColor={TEXT_MUTED}
-                style={styles.input}
-                returnKeyType="send"
-                onSubmitEditing={handleSend}
-                editable={!isLoading}
-              />
-              <TouchableOpacity
-                style={styles.micBtn}
-                activeOpacity={0.75}
-                hitSlop={{
-                  top: 10,
-                  bottom: 10,
-                  left: 10,
-                  right: 10
-                }}>
-                <Feather name="mic" size={18} color={GOLD} />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
-              onPress={handleSend}
-              disabled={!canSend}
-              activeOpacity={0.85}
-              hitSlop={{
-                top: 10,
-                bottom: 10,
-                left: 10,
-                right: 10
-              }}>
-              {isLoading ? (
-                <ActivityIndicator size="small" color={BG} />
+            >
+              {isTranscribing ? (
+                <ActivityIndicator size="small" color={GOLD} />
               ) : (
-                <Feather name="arrow-up" size={18} color={BG} />
+                <Feather name={isRecording ? 'square' : 'mic'} size={18} color={GOLD} />
               )}
             </TouchableOpacity>
           </View>
@@ -584,6 +671,11 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, color: TEXT_PRIMARY, fontFamily: FONTS.medium, fontSize: 14 },
   micBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  micBtnRecording: {
+    opacity: 0.95,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239,83,80,0.2)',
+  },
   sendBtn: {
     width: 34,
     height: 34,
