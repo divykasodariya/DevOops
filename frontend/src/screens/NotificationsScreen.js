@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: COLORS.background,
-  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+   paddingTop: Platform.OS === 'android' ? 64 : 88 },
   scroll: {
     paddingHorizontal: 14,
     paddingTop: 10,

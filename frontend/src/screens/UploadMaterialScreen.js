@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.bg,
     
-  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+   paddingTop: Platform.OS === 'android' ? 64 : 88 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

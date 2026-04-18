@@ -1,9 +1,11 @@
 import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
-  Animated,
+  ActivityIndicator,
   Alert,
+  Animated,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -11,8 +13,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Keyboard,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -348,7 +348,7 @@ export default function AIAssistantScreen() {
   const micDisabled = isTranscribing || (!isRecording && isLoading);
 
   return (
-    <View style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <View style={styles.avatarWrap}>
@@ -371,8 +371,8 @@ export default function AIAssistantScreen() {
         </TouchableOpacity>
       </View>
       <KeyboardAvoidingView
-        style={[styles.kav, { marginBottom: isKeyboardVisible ? 0 : NAV_H }]}
-        behavior="padding"
+        style={[styles.kav, { marginBottom: keyboardVisible ? 0 : NAV_H }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'android' ? 64 : 88}>
         <ScrollView
           ref={scrollRef}
@@ -449,7 +449,7 @@ export default function AIAssistantScreen() {
           styles.composerDock,
           { bottom: keyboardVisible ? keyboardHeight : NAV_H },
         ]}
-      />
+      >
         <View style={styles.composerRow}>
           <TouchableOpacity style={styles.plusBtn} activeOpacity={0.75}>
             <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
@@ -479,8 +479,9 @@ export default function AIAssistantScreen() {
             </TouchableOpacity>
           </View>
         </View>
+      </View>
       </KeyboardAvoidingView>
-      {!isKeyboardVisible && (
+      {!keyboardVisible && (
         <View style={styles.nav}>
           <TouchableOpacity
             style={styles.navItem}
@@ -518,7 +519,7 @@ export default function AIAssistantScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
