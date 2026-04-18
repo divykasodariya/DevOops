@@ -57,7 +57,7 @@ TOOLS = {
     # ── Issues ───────────────────────────────────────────────
     "report_issue": {
         "description": "Report a campus infrastructure issue — electrical, plumbing, IT, safety",
-        "params": ["title", "category", "location", "description"],
+        "params": ["title", "location", "category", "priority","description"],
     },
     "check_my_issues": {
         "description": "Check status of issues I have reported",
@@ -82,6 +82,12 @@ TOOLS = {
     "send_email": {
         "description": "Send an email directly to a faculty, HOD, or any address",
         "params": ["to", "subject", "body"],
+    },
+
+    # ── Payments ─────────────────────────────────────────────
+    "check_payments": {
+        "description": "Get my pending fines, lab dues, and fee payments",
+        "params": [],
     },
 
     # ── RAG ──────────────────────────────────────────────────
