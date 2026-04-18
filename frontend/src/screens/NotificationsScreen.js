@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -155,7 +156,10 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.iconCircle}
@@ -170,7 +174,16 @@ export default function NotificationsScreen() {
             <Text style={styles.title}>Notifications</Text>
             <Text style={styles.subtitle}>All campus updates in one place.</Text>
           </View>
-          <TouchableOpacity style={styles.iconCircle} onPress={loadNotifications} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.iconCircle}
+            onPress={loadNotifications}
+            activeOpacity={0.85}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="refresh-cw" size={15} color={COLORS.gold} />
           </TouchableOpacity>
         </View>
@@ -244,7 +257,7 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   scroll: {
     paddingHorizontal: 14,
     paddingTop: 10,

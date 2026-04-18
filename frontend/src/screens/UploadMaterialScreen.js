@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useMemo, useState } from 'react';
 import {
   View,
@@ -133,13 +134,23 @@ export default function UploadMaterialScreen() {
   return (
     <View style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Ionicons name="arrow-back" size={22} color={theme.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Upload Material</Text>
       </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <Text style={styles.label}>Title</Text>
           <TextInput
@@ -161,7 +172,16 @@ export default function UploadMaterialScreen() {
             onChangeText={setDescription}
           />
 
-          <TouchableOpacity style={styles.filePickerButton} onPress={pickFiles} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.filePickerButton}
+            onPress={pickFiles}
+            activeOpacity={0.85}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Ionicons name="attach" size={18} color={theme.primary} />
             <Text style={styles.filePickerText}>Choose Files</Text>
           </TouchableOpacity>
@@ -176,7 +196,14 @@ export default function UploadMaterialScreen() {
                     <Text numberOfLines={1} style={styles.fileName}>{file.name}</Text>
                     <Text style={styles.fileSize}>{formatSize(file.size)}</Text>
                   </View>
-                  <TouchableOpacity onPress={() => removeFile(file.uri)}>
+                  <TouchableOpacity
+                    onPress={() => removeFile(file.uri)}
+                    hitSlop={{
+                      top: 10,
+                      bottom: 10,
+                      left: 10,
+                      right: 10
+                    }}>
                     <Ionicons name="close-circle" size={20} color={theme.danger} />
                   </TouchableOpacity>
                 </View>
@@ -189,7 +216,12 @@ export default function UploadMaterialScreen() {
             disabled={disabled}
             onPress={uploadMaterials}
             activeOpacity={0.85}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             {uploading ? (
               <ActivityIndicator size="small" color="#16130c" />
             ) : (
@@ -206,8 +238,8 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.bg,
-    paddingTop: Platform.OS === 'android' ? 36 : 56,
-  },
+    
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

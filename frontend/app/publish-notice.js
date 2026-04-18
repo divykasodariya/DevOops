@@ -105,7 +105,10 @@ export default function PublishNoticeScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={st.safe} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView
+      style={st.safe}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
       <ScrollView contentContainerStyle={st.scroll} showsVerticalScrollIndicator={false}>
         
         {/* ── HEADER ── */}
@@ -284,7 +287,7 @@ const NAV_H = Platform.OS === 'ios' ? 84 : 64;
 
 const st = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BG },
-  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 16 },
+  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 64 : 24 },
 
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#2d2a22', paddingBottom: 16 },
   headerL: { flexDirection: 'row', alignItems: 'center' },

@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState } from 'react';
 import {
   Alert,
@@ -74,10 +75,22 @@ export default function ReportIssueScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={styles.safe}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="arrow-left" size={20} color={GOLD} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Report Issue</Text>
@@ -111,7 +124,12 @@ export default function ReportIssueScreen() {
                 key={item}
                 style={[styles.chip, category === item && styles.chipActive]}
                 onPress={() => setCategory(item)}
-              >
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
                 <Text style={[styles.chipText, category === item && styles.chipTextActive]}>
                   {item.toUpperCase()}
                 </Text>
@@ -126,7 +144,12 @@ export default function ReportIssueScreen() {
                 key={item}
                 style={[styles.chip, priority === item && styles.chipActive]}
                 onPress={() => setPriority(item)}
-              >
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
                 <Text style={[styles.chipText, priority === item && styles.chipTextActive]}>
                   {item.toUpperCase()}
                 </Text>
@@ -150,18 +173,24 @@ export default function ReportIssueScreen() {
             onPress={handleSubmit}
             disabled={submitting}
             activeOpacity={0.82}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Text style={styles.submitBtnText}>{submitting ? 'Submitting...' : 'Submit Issue'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
-  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 20, paddingBottom: 30 },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2a251d' },
   headerTitle: { marginLeft: 12, fontFamily: FONTS.bold, fontSize: 24, color: TEXT_PRIMARY },

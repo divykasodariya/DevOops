@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   Animated,
@@ -11,6 +12,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -346,7 +348,7 @@ export default function AIAssistantScreen() {
   const micDisabled = isTranscribing || (!isRecording && isLoading);
 
   return (
-    <View style={styles.safe}>
+    <View style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <View style={styles.avatarWrap}>
@@ -355,19 +357,32 @@ export default function AIAssistantScreen() {
           <Text style={styles.brandTitle}>Aether AI</Text>
           <View style={styles.onlineDot} />
         </View>
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.75} onPress={handleClearChat}>
+        <TouchableOpacity
+          style={styles.bellBtn}
+          activeOpacity={0.75}
+          onPress={handleClearChat}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="trash-2" size={18} color={GOLD} />
         </TouchableOpacity>
       </View>
-
-      <ScrollView
-        ref={scrollRef}
-        style={styles.thread}
-        contentContainerStyle={styles.threadContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onContentSizeChange={() => scrollToEnd()}
-      >
+      <KeyboardAvoidingView
+        style={[styles.kav, { marginBottom: isKeyboardVisible ? 0 : NAV_H }]}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'android' ? 64 : 88}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.thread}
+          contentContainerStyle={styles.threadContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          onContentSizeChange={() => scrollToEnd()}
+        >
         <View style={styles.dayPill}>
           <Text style={styles.dayPillText}>Today</Text>
         </View>
@@ -463,43 +478,46 @@ export default function AIAssistantScreen() {
               )}
             </TouchableOpacity>
           </View>
+        </View>
+      </KeyboardAvoidingView>
+      {!isKeyboardVisible && (
+        <View style={styles.nav}>
           <TouchableOpacity
-            style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!canSend}
+            style={styles.navItem}
+            onPress={() => router.push('/dashboard')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="home" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>HOME</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/schedule')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="calendar" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>SCHEDULE</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
             activeOpacity={0.85}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={BG} />
-            ) : (
-              <Feather name="arrow-up" size={18} color={BG} />
-            )}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <MaterialCommunityIcons name="robot-outline" size={20} color={GOLD} />
+            <Text style={[styles.navLabel, styles.navLabelActive]}>AI ASSISTANT</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/alerts')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="bell" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>ALERTS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="user" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>PROFILE</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.nav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/dashboard')}>
-          <Feather name="home" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>HOME</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/schedule')}>
-          <Feather name="calendar" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>SCHEDULE</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.85}>
-          <MaterialCommunityIcons name="robot-outline" size={20} color={GOLD} />
-          <Text style={[styles.navLabel, styles.navLabelActive]}>AI ASSISTANT</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/alerts')}>
-          <Feather name="bell" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>ALERTS</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Feather name="user" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>PROFILE</Text>
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 }
@@ -515,9 +533,10 @@ function formatTime(date) {
 const NAV_H = Platform.OS === 'ios' ? 84 : 66;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+  kav: { flex: 1, marginBottom: NAV_H },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 22,
+    paddingTop: 10,
     paddingHorizontal: 16,
     height: Platform.OS === 'ios' ? 108 : 76,
     backgroundColor: '#0f0d09',
@@ -543,7 +562,7 @@ const styles = StyleSheet.create({
   bellBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
 
   thread: { flex: 1 },
-  threadContent: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 130 },
+  threadContent: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 20 },
   dayPill: {
     alignSelf: 'center',
     backgroundColor: '#2a251d',
@@ -624,18 +643,15 @@ const styles = StyleSheet.create({
   },
 
   composerDock: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 8,
+    backgroundColor: '#15120d',
+    borderTopWidth: 1,
+    borderTopColor: '#201c15',
   },
   composerRow: {
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     backgroundColor: '#15120d',
-    borderTopWidth: 1,
-    borderTopColor: '#201c15',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

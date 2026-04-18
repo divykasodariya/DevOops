@@ -19,8 +19,10 @@ export default function RoleSelectionScreen() {
   const [selectedRole, setSelectedRole] = useState('student');
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <View style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <Text style={styles.title}>Select Your Role</Text>
           <Text style={styles.subtitle}>Choose your primary account type to continue.</Text>
@@ -36,7 +38,12 @@ export default function RoleSelectionScreen() {
               ]}
               onPress={() => setSelectedRole(role.id)}
               activeOpacity={0.8}
-            >
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
               <View style={[styles.iconContainer, selectedRole === role.id && styles.iconContainerSelected]}>
                 <Feather name={role.icon} size={22} color={selectedRole === role.id ? COLORS.gold : COLORS.muted} />
               </View>
@@ -54,7 +61,7 @@ export default function RoleSelectionScreen() {
           style={styles.button} 
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -62,7 +69,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   container: {
     flexGrow: 1,
     padding: SPACING.xl,

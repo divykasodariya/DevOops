@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -192,12 +193,19 @@ export default function ApprovalsScreen() {
   return (
     <View style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Ionicons name="arrow-back" size={22} color={theme.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pending Approvals · {pendingCount}</Text>
       </View>
-
       <View style={styles.tabContainer}>
         {tabs.map((tab) => (
           <TouchableOpacity
@@ -205,13 +213,20 @@ export default function ApprovalsScreen() {
             style={[styles.tabFilter, activeTab === tab && styles.tabFilterActive]}
             onPress={() => setActiveTab(tab)}
             activeOpacity={0.8}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
           </TouchableOpacity>
         ))}
       </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         {/* Show spinner while either user or requests are still loading */}
         {loading || !currentUserId ? (
           <View style={styles.loaderWrap}>
@@ -240,7 +255,12 @@ export default function ApprovalsScreen() {
                   onPress={() => handleAction(req._id, 'reject')}
                   disabled={actioningId === req._id}
                   activeOpacity={0.8}
-                >
+                  hitSlop={{
+                    top: 10,
+                    bottom: 10,
+                    left: 10,
+                    right: 10
+                  }}>
                   {actioningId === req._id
                     ? <ActivityIndicator size="small" color={theme.errorText} />
                     : <>
@@ -255,7 +275,12 @@ export default function ApprovalsScreen() {
                   onPress={() => handleAction(req._id, 'approve')}
                   disabled={actioningId === req._id}
                   activeOpacity={0.8}
-                >
+                  hitSlop={{
+                    top: 10,
+                    bottom: 10,
+                    left: 10,
+                    right: 10
+                  }}>
                   {actioningId === req._id
                     ? <ActivityIndicator size="small" color={theme.successText} />
                     : <>
@@ -277,8 +302,8 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.bg,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
+    
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -279,7 +280,16 @@ export default function BookSpaceScreen() {
         </Text>
 
         <Text style={styles.label}>SELECT SPACE</Text>
-        <TouchableOpacity style={styles.selectRow} onPress={() => setSpaceOpen(true)} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.selectRow}
+          onPress={() => setSpaceOpen(true)}
+          activeOpacity={0.85}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Text style={styles.selectText} numberOfLines={2}>
             {space.label}
           </Text>
@@ -287,7 +297,16 @@ export default function BookSpaceScreen() {
         </TouchableOpacity>
 
         <Text style={styles.label}>DATE</Text>
-        <TouchableOpacity style={styles.selectRow} onPress={() => setDateOpen(true)} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.selectRow}
+          onPress={() => setDateOpen(true)}
+          activeOpacity={0.85}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Text style={styles.selectText}>
             {selectedDay.toLocaleDateString(undefined, {
               weekday: 'short',
@@ -300,7 +319,16 @@ export default function BookSpaceScreen() {
         </TouchableOpacity>
 
         <Text style={styles.label}>START TIME</Text>
-        <TouchableOpacity style={styles.selectRow} onPress={() => setTimeMode('start')} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.selectRow}
+          onPress={() => setTimeMode('start')}
+          activeOpacity={0.85}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Text style={styles.selectText}>{formatDisplayTime(startT.h, startT.m)}</Text>
           <Feather name="clock" size={18} color={T2} />
         </TouchableOpacity>
@@ -310,7 +338,12 @@ export default function BookSpaceScreen() {
           style={[styles.selectRow, (conflict || invalidRange) && styles.selectRowError]}
           onPress={() => setTimeMode('end')}
           activeOpacity={0.85}
-        >
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Text style={styles.selectText}>{formatDisplayTime(endT.h, endT.m)}</Text>
           <Feather name="clock" size={18} color={T2} />
         </TouchableOpacity>
@@ -337,7 +370,12 @@ export default function BookSpaceScreen() {
           disabled={submitting || conflict || invalidRange}
           onPress={handleConfirm}
           style={[styles.ctaWrap, (submitting || conflict || invalidRange) && styles.ctaDisabled]}
-        >
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <LinearGradient colors={[GOLD_D, GOLD]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaGrad}>
             {submitting ? (
               <ActivityIndicator color={BG} />
@@ -349,33 +387,79 @@ export default function BookSpaceScreen() {
 
         <View style={{ height: NAV_H + 24 }} />
       </ScrollView>
-
       <View style={styles.nav}>
-        <TouchableOpacity style={styles.navI} onPress={() => router.replace(homeRoute)}>
+        <TouchableOpacity
+          style={styles.navI}
+          onPress={() => router.replace(homeRoute)}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="home" size={20} color={T3} />
           <Text style={styles.navL}>HOME</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navI} onPress={() => router.replace('/schedule')}>
+        <TouchableOpacity
+          style={styles.navI}
+          onPress={() => router.replace('/schedule')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="calendar" size={20} color={GOLD} />
           <Text style={[styles.navL, styles.navLActive]}>SCHEDULE</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navI} onPress={() => router.push('/ai-assistant')}>
+        <TouchableOpacity
+          style={styles.navI}
+          onPress={() => router.push('/ai-assistant')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <MaterialCommunityIcons name="robot-outline" size={22} color={T3} />
           <Text style={styles.navL}>AI ASSISTANT</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navI} onPress={() => router.push('/alerts')}>
+        <TouchableOpacity
+          style={styles.navI}
+          onPress={() => router.push('/alerts')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="bell" size={20} color={T3} />
           <Text style={styles.navL}>ALERTS</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navI}>
+        <TouchableOpacity
+          style={styles.navI}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="user" size={20} color={T3} />
           <Text style={styles.navL}>PROFILE</Text>
         </TouchableOpacity>
       </View>
-
       <Modal visible={spaceOpen} animationType="slide" transparent onRequestClose={() => setSpaceOpen(false)}>
         <View style={styles.modalRoot}>
-          <TouchableOpacity style={styles.modalFill} activeOpacity={1} onPress={() => setSpaceOpen(false)} />
+          <TouchableOpacity
+            style={styles.modalFill}
+            activeOpacity={1}
+            onPress={() => setSpaceOpen(false)}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }} />
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Select space</Text>
             <ScrollView keyboardShouldPersistTaps="handled">
@@ -387,7 +471,12 @@ export default function BookSpaceScreen() {
                     setSpaceIndex(i);
                     setSpaceOpen(false);
                   }}
-                >
+                  hitSlop={{
+                    top: 10,
+                    bottom: 10,
+                    left: 10,
+                    right: 10
+                  }}>
                   <Text style={styles.modalRowText}>{s.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -395,10 +484,18 @@ export default function BookSpaceScreen() {
           </View>
         </View>
       </Modal>
-
       <Modal visible={dateOpen} animationType="slide" transparent onRequestClose={() => setDateOpen(false)}>
         <View style={styles.modalRoot}>
-          <TouchableOpacity style={styles.modalFill} activeOpacity={1} onPress={() => setDateOpen(false)} />
+          <TouchableOpacity
+            style={styles.modalFill}
+            activeOpacity={1}
+            onPress={() => setDateOpen(false)}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }} />
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>Select date</Text>
             <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
@@ -412,7 +509,12 @@ export default function BookSpaceScreen() {
                       setSelectedDay(d);
                       setDateOpen(false);
                     }}
-                  >
+                    hitSlop={{
+                      top: 10,
+                      bottom: 10,
+                      left: 10,
+                      right: 10
+                    }}>
                     <Text style={styles.modalRowText}>
                       {d.toLocaleDateString(undefined, {
                         weekday: 'long',
@@ -428,10 +530,18 @@ export default function BookSpaceScreen() {
           </View>
         </View>
       </Modal>
-
       <Modal visible={timeMode !== null} animationType="slide" transparent onRequestClose={() => setTimeMode(null)}>
         <View style={styles.modalRoot}>
-          <TouchableOpacity style={styles.modalFill} activeOpacity={1} onPress={() => setTimeMode(null)} />
+          <TouchableOpacity
+            style={styles.modalFill}
+            activeOpacity={1}
+            onPress={() => setTimeMode(null)}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }} />
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>{timeMode === 'start' ? 'Start time' : 'End time'}</Text>
             <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
@@ -444,7 +554,12 @@ export default function BookSpaceScreen() {
                     else setEndT({ h: opt.h, m: opt.m });
                     setTimeMode(null);
                   }}
-                >
+                  hitSlop={{
+                    top: 10,
+                    bottom: 10,
+                    left: 10,
+                    right: 10
+                  }}>
                   <Text style={styles.modalRowText}>{opt.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -457,8 +572,8 @@ export default function BookSpaceScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
-  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 8 : 16, paddingBottom: 16 },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',

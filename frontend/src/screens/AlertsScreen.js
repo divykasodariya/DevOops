@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useCallback, useState } from 'react';
 import {
   View,
@@ -90,7 +91,6 @@ export default function AlertsScreen() {
         <Text style={styles.headerTitle}>Announcements</Text>
         <View style={{ width: 34 }} />
       </View>
-
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={GOLD} />
@@ -100,7 +100,7 @@ export default function AlertsScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={GOLD} />}
           showsVerticalScrollIndicator={false}
-        >
+          keyboardShouldPersistTaps="handled">
           {items.length === 0 ? (
             <Text style={styles.empty}>No announcements yet.</Text>
           ) : (
@@ -119,12 +119,12 @@ export default function AlertsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingTop: 10,
     paddingHorizontal: 16,
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
