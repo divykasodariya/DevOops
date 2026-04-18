@@ -276,7 +276,7 @@ export default function AIAssistantScreen() {
           <Feather name="bell" size={20} color={TEXT_MUTED} />
           <Text style={styles.navLabel}>ALERTS</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/profile')}>
           <Feather name="user" size={20} color={TEXT_MUTED} />
           <Text style={styles.navLabel}>PROFILE</Text>
         </TouchableOpacity>

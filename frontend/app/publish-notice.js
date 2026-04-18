@@ -274,7 +274,7 @@ export default function PublishNoticeScreen() {
           </LinearGradient>
         </View>
         <TouchableOpacity style={st.navItem}><Feather name="bell" size={23} color="#78716c" /><Text style={st.navLbl}>ALERTS</Text></TouchableOpacity>
-        <TouchableOpacity style={st.navItem}><Feather name="user" size={23} color="#78716c" /><Text style={st.navLbl}>PROFILE</Text></TouchableOpacity>
+        <TouchableOpacity style={st.navItem} onPress={() => router.push('/profile')}><Feather name="user" size={23} color="#78716c" /><Text style={st.navLbl}>PROFILE</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );

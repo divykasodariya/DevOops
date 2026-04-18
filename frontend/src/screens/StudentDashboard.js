@@ -388,7 +388,7 @@ export default function StudentDashboard() {
           <Feather name="bell" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>ALERTS</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/profile')}>
           <Feather name="user" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>PROFILE</Text>
         </TouchableOpacity>
