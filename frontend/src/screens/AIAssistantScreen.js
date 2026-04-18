@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Keyboard,
   Platform,
   ScrollView,
   StyleSheet,
@@ -46,6 +47,8 @@ export default function AIAssistantScreen() {
   const didInitFromQuery = useRef(false);
   const [input, setInput] = useState(initialInput);
   const [messages, setMessages] = useState([]);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const starterMessages = useMemo(
     () => [
@@ -125,6 +128,27 @@ export default function AIAssistantScreen() {
     setInput('');
   }, [initialInput, messages.length]);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (event) => {
+      setKeyboardVisible(true);
+      setKeyboardHeight(event?.endCoordinates?.height || 0);
+    };
+    const onHide = () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    };
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const canSend = useMemo(() => input.trim().length > 0, [input]);
 
   const handleSend = () => {
@@ -164,7 +188,12 @@ export default function AIAssistantScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.thread} contentContainerStyle={styles.threadContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.thread}
+        contentContainerStyle={styles.threadContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.dayPill}>
           <Text style={styles.dayPillText}>Today</Text>
         </View>
@@ -193,32 +222,41 @@ export default function AIAssistantScreen() {
         })}
       </ScrollView>
 
-      <View style={styles.composerRow}>
-        <TouchableOpacity style={styles.plusBtn} activeOpacity={0.75}>
-          <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
-        </TouchableOpacity>
-        <View style={styles.inputWrap}>
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="Ask Aether"
-            placeholderTextColor={TEXT_MUTED}
-            style={styles.input}
-            returnKeyType="send"
-            onSubmitEditing={handleSend}
-          />
-          <TouchableOpacity style={styles.micBtn} activeOpacity={0.75}>
-            <Feather name="mic" size={18} color={GOLD} />
+      <View
+        style={[
+          styles.composerDock,
+          {
+            bottom: keyboardVisible ? keyboardHeight : NAV_H,
+          },
+        ]}
+      >
+        <View style={styles.composerRow}>
+          <TouchableOpacity style={styles.plusBtn} activeOpacity={0.75}>
+            <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
+          </TouchableOpacity>
+          <View style={styles.inputWrap}>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask Aether"
+              placeholderTextColor={TEXT_MUTED}
+              style={styles.input}
+              returnKeyType="send"
+              onSubmitEditing={handleSend}
+            />
+            <TouchableOpacity style={styles.micBtn} activeOpacity={0.75}>
+              <Feather name="mic" size={18} color={GOLD} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={!canSend}
+            activeOpacity={0.85}
+          >
+            <Feather name="arrow-up" size={18} color={BG} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
-          onPress={handleSend}
-          disabled={!canSend}
-          activeOpacity={0.85}
-        >
-          <Feather name="arrow-up" size={18} color={BG} />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.nav}>
@@ -278,7 +316,7 @@ const styles = StyleSheet.create({
   bellBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
 
   thread: { flex: 1 },
-  threadContent: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 30 },
+  threadContent: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 130 },
   dayPill: {
     alignSelf: 'center',
     backgroundColor: '#2a251d',
@@ -322,6 +360,12 @@ const styles = StyleSheet.create({
   inlineCardTitle: { color: TEXT_PRIMARY, fontFamily: FONTS.bold, fontSize: 11, letterSpacing: 0.8 },
   inlineCardSubtitle: { color: TEXT_SECONDARY, fontFamily: FONTS.medium, fontSize: 12, marginTop: 2 },
 
+  composerDock: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 8,
+  },
   composerRow: {
     paddingHorizontal: 12,
     paddingTop: 8,
@@ -359,6 +403,10 @@ const styles = StyleSheet.create({
   sendBtnDisabled: { opacity: 0.35 },
 
   nav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     height: NAV_H,
     backgroundColor: NAV_BG,
     borderTopWidth: StyleSheet.hairlineWidth,
