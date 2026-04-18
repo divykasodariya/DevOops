@@ -29,13 +29,25 @@ async def agent_chat(inp: CopilotInput):
     Agentic endpoint — the AI plans + executes tool calls
     (attendance, schedule, email, RAG, etc.) and returns a summarized reply.
     """
-    return await run_agent(
-        message=inp.message,
-        user_id=inp.user_id,
-        role=inp.role,
-        history=inp.history,
-        token=inp.token or "",
-    )
+    try:
+        return await run_agent(
+            message=inp.message,
+            user_id=inp.user_id,
+            role=inp.role,
+            history=inp.history,
+            token=inp.token or "",
+        )
+    except Exception as e:
+        logger.error(f"/copilot/agent fatal: {e}", exc_info=True)
+        return {
+            "reply": (
+                "Something went wrong while handling that request. "
+                "For room bookings, include a room code, date, and start/end times in ISO format."
+            ),
+            "tool_calls": [],
+            "results": {},
+            "thoughts": "",
+        }
 
 
 # ── RAG endpoints ────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import json
 import jwt
+from copy import deepcopy
 from config import settings
 from services.llm.llm_client import call_llm
 from services.tools.mailer import send_email
@@ -20,11 +21,46 @@ from db.queries import (
 )
 from utils.json_parser import safe_parse_json
 from utils.logger import logger
+from bookable_spaces import BOOKABLE_SPACES, format_bookable_spaces_for_prompt
 
 
 FALLBACK_TEACHER_EMAIL = "krishkhandwalacnm@gmail.com"
 
 INVALID_EMAIL_HINTS = ["teacher", "email", "unknown", "string", "none", "null", "placeholder", "@example"]
+
+
+def _normalize_create_schedule_params(params: dict | None) -> dict:
+    """Map LLM keys to Node POST /schedule; avoid bad types that cause 500s."""
+    if not params:
+        return {}
+    p = deepcopy(params)
+    for src, dst in (
+        ("start_time", "start"),
+        ("end_time", "end"),
+        ("startTime", "start"),
+        ("endTime", "end"),
+    ):
+        if src in p and dst not in p:
+            p[dst] = p[src]
+    if p.get("start") is not None:
+        p["start"] = str(p["start"]).strip()
+    if p.get("end") is not None:
+        p["end"] = str(p["end"]).strip()
+    if p.get("room") is not None:
+        p["room"] = str(p["room"]).strip()
+    t = str(p.get("type") or "").lower().strip()
+    if t in ("", "booking", "book", "reservation", "room", "study"):
+        p["type"] = "room_booking"
+    return p
+
+
+def _safe_json_dumps(obj: dict) -> str:
+    try:
+        return json.dumps(obj, default=str)
+    except (TypeError, ValueError) as e:
+        logger.warning(f"json.dumps tool results failed: {e}")
+        return json.dumps({k: repr(v) for k, v in obj.items()})
+
 
 TOOLS = {
     # ── Attendance ───────────────────────────────────────────
@@ -46,12 +82,26 @@ TOOLS = {
         "description": "Get my upcoming classes, exams, and events",
         "params": [],
     },
+    "list_bookable_spaces": {
+        "description": (
+            "List every study room / rehearsal space students can reserve, with official room IDs. "
+            "Call when the user asks what rooms exist, what they can book, or before suggesting a booking."
+        ),
+        "params": [],
+    },
     "check_free_slots": {
-        "description": "Check free room slots for a given room and date",
+        "description": (
+            "Check free 1-hour slots (8am–6pm local) for one room on a date. "
+            "Params: room = exact code from list_bookable_spaces (e.g. LIB-STUDY-A); date = YYYY-MM-DD."
+        ),
         "params": ["room", "date"],
     },
     "create_schedule": {
-        "description": "Create a new schedule or class entry",
+        "description": (
+            "Book a room or create a schedule entry. For study/room bookings use type room_booking, "
+            "room code (e.g. LIB-STUDY-A), start and end as full ISO 8601 datetimes (UTC or offset). "
+            "Example end: 2026-04-19T16:00:00.000Z"
+        ),
         "params": ["title", "type", "room", "start", "end"],
     },
 
@@ -124,6 +174,10 @@ You help students and faculty by actually performing tasks, not just answering.
 You have access to these tools:
 {tools}
 
+Official bookable spaces (use these exact `room` codes in check_free_slots and create_schedule):
+{bookable_spaces}
+Tip: In the mobile app, users can also open Schedule → "Book a Space" to pick a room from this same list.
+
 User role: {role}
 
 When the user sends a message:
@@ -144,6 +198,10 @@ Rules:
 - For send_email: NEVER invent or guess email addresses. If "to" is not explicitly given, set it to ""
 - For check_attendance, check_schedule, check_payments, check_requests, check_notifications — no params needed
 - For search_docs: set question to exactly what the user is asking about
+- For check_free_slots: room and date are required; date must be YYYY-MM-DD (e.g. 2026-04-19). Only use room codes from the list above or from list_bookable_spaces.
+- If the user asks what rooms they can book or what spaces exist, call list_bookable_spaces (or use the list above) and give friendly names plus codes and capacity.
+- For create_schedule (room booking): use type room_booking, a room code from the official list, start and end as ISO 8601 strings. Never omit start/end.
+- Never make up room codes — only use listed spaces.
 - Never make up data — use tools to fetch real data
 - You can call multiple tools in one shot
 """
@@ -180,6 +238,7 @@ async def run_agent(
             "role":    "system",
             "content": AGENT_SYSTEM.format(
                 tools=tool_descriptions,
+                bookable_spaces=format_bookable_spaces_for_prompt(),
                 role=role,
             ),
         },
@@ -270,8 +329,17 @@ async def run_agent(
                     date=params.get("date", ""),
                 )
 
+            elif tool_name == "list_bookable_spaces":
+                results["list_bookable_spaces"] = {
+                    "spaces": BOOKABLE_SPACES,
+                    "hours": "Free-slot checks use 8:00–18:00 local time in 1-hour steps.",
+                    "app_hint": "Schedule tab → Book a Space lists the same rooms in the UI.",
+                }
+
             elif tool_name == "create_schedule":
-                results["create_schedule"] = await create_schedule(token, params)
+                results["create_schedule"] = await create_schedule(
+                    token, _normalize_create_schedule_params(params)
+                )
 
             # ── Requests ─────────────────────────────────────────
             elif tool_name == "check_requests":
@@ -344,17 +412,20 @@ async def run_agent(
                 "role":    "system",
                 "content": (
                     "You are CampusAI. Summarize the tool results below into a "
-                    "clear, friendly reply for a college student. Max 4 sentences. "
+                    "clear, friendly reply for a college student. Max 6 short sentences if needed for room lists. "
                     "If attendance is low in any subject, mention it. "
                     "If an email was sent, confirm it. "
-                    "If a request was submitted, confirm it."
+                    "If a request was submitted, confirm it. "
+                    "If list_bookable_spaces or free_slots is in the results, name each space with its room code and capacity; "
+                    "for free_slots, mention how many openings there are and suggest concrete times. "
+                    "Remind users they can book in the app under Schedule → Book a Space."
                 ),
             },
             {
                 "role":    "user",
                 "content": (
                     f"Original request: {message}\n\n"
-                    f"Tool results: {json.dumps(results, default=str)}"
+                    f"Tool results: {_safe_json_dumps(results)}"
                 ),
             },
         ]
