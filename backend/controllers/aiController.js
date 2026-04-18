@@ -6,6 +6,9 @@
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
+const GROQ_TRANSCRIBE_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_WHISPER_MODEL = process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3-turbo';
+
 export const chatWithAI = async (req, res) => {
   try {
     const { message, history = [] } = req.body;
@@ -61,5 +64,56 @@ export const chatWithAI = async (req, res) => {
       message: 'Internal server error',
       reply:   'Sorry, something went wrong. Please try again.',
     });
+  }
+};
+
+/**
+ * POST multipart field `audio` — forwards to Groq Whisper (same API key pattern as ai_services).
+ */
+export const transcribeAudio = async (req, res) => {
+  try {
+    if (!req.file?.buffer) {
+      return res.status(400).json({ message: 'No audio file (field name: audio)' });
+    }
+
+    const key = process.env.GROQ_API_KEY;
+    if (!key) {
+      return res.status(503).json({
+        message: 'Speech-to-text is not configured (set GROQ_API_KEY on the server).',
+      });
+    }
+
+    const ext = (req.file.originalname && req.file.originalname.includes('.'))
+      ? req.file.originalname.split('.').pop()
+      : 'm4a';
+    const filename = `audio.${ext}`;
+    const mime = req.file.mimetype || 'application/octet-stream';
+
+    // Use global FormData + Blob — the `form-data` package + fetch() often truncates the body (Groq: multipart NextPart: EOF).
+    const form = new FormData();
+    form.append('model', GROQ_WHISPER_MODEL);
+    form.append('file', new Blob([req.file.buffer], { type: mime }), filename);
+
+    const response = await fetch(GROQ_TRANSCRIBE_URL, {
+      method:  'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+      },
+      body: form,
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`Groq transcribe error (${response.status}):`, errText);
+      return res.status(502).json({ message: 'Transcription service returned an error.' });
+    }
+
+    const data = await response.json();
+    const text = (data.text || '').trim();
+
+    return res.status(200).json({ text });
+  } catch (error) {
+    console.error('transcribeAudio error:', error);
+    return res.status(500).json({ message: 'Failed to transcribe audio' });
   }
 };
