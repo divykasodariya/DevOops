@@ -2,6 +2,7 @@ import ApprovalRequest from '../models/ApprovalRequest.js';
 import ProfessorProfile from '../models/ProfessorProfile.js';
 import { Notification } from '../models/Notification.js';
 import { Department } from '../models/Department.js';
+import { Schedule } from '../models/Schedule.js';
 
 const calculateMatchScore = (requestTags, professorInterests) => {
   if (!requestTags || requestTags.length === 0) return 0;
@@ -193,6 +194,39 @@ export const actionRequest = async (req, res) => {
 
       if (currentStepIndex + 1 === request.steps.length) {
         request.overallStatus = 'approved';
+
+        // If this is a room booking, auto-create a Schedule entry
+        if (request.type === 'room' && request.meta?.room && request.meta?.start && request.meta?.end) {
+          // Run clash detection
+          let clashConflicts = [];
+          const clashes = await Schedule.find({
+            room: request.meta.room,
+            isActive: true,
+            start: { $lt: new Date(request.meta.end) },
+            end: { $gt: new Date(request.meta.start) },
+          });
+          clashConflicts = clashes.map(c => ({
+            conflictingScheduleId: c._id,
+            reason: 'same room',
+          }));
+
+          const schedule = await Schedule.create({
+            title: request.title,
+            type: 'room_booking',
+            room: request.meta.room,
+            department: request.department,
+            start: new Date(request.meta.start),
+            end: new Date(request.meta.end),
+            audience: 'user',
+            audienceIds: [request.requestedBy],
+            clashChecked: true,
+            clashConflicts,
+            createdBy: request.requestedBy,
+          });
+
+          request.relatedSchedule = schedule._id;
+        }
+
         // Notify the requester
         await Notification.create({
           recipient: request.requestedBy,

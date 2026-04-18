@@ -1,0 +1,462 @@
+Alright bro — now I’ve seen your **actual backend code**.
+I’m going to give you a **FULL, CLEAN, REAL API DOCUMENTATION + HOW TO USE + POSTMAN FLOW**.
+
+No confusion after this.
+
+---
+
+# 🧠 0. YOUR BACKEND STRUCTURE (IMPORTANT)
+
+Your routes are:
+
+```
+/auth        → login/signup
+/prof        → professor profile
+/request     → approval system
+```
+
+From your server: 
+
+---
+
+# 🔐 1. AUTH APIs (LOGIN / SIGNUP)
+
+From: 
+
+---
+
+## 🟢 REGISTER
+
+### POST `/auth/register`
+
+### Body:
+
+```json
+{
+  "name": "Student One",
+  "email": "student@test.com",
+  "password": "123",
+  "role": "student"
+}
+```
+
+---
+
+## ✅ Response:
+
+```json
+{
+  "_id": "USER_ID",
+  "name": "Student One",
+  "email": "student@test.com",
+  "role": "student"
+}
+```
+
+👉 Also sets **JWT cookie automatically** 
+
+---
+
+## 🔵 LOGIN
+
+### POST `/auth/login`
+
+```json
+{
+  "email": "student@test.com",
+  "password": "123"
+}
+```
+
+---
+
+## ⚠️ IMPORTANT FOR POSTMAN
+
+👉 After login:
+
+* Go to **Cookies (top right in Postman)**
+* You should see `jwt`
+
+👉 This cookie is REQUIRED for all next APIs
+
+---
+
+# 👨‍🏫 2. PROFESSOR PROFILE
+
+From: 
+
+---
+
+## POST `/prof/setup`
+
+👉 Only for **faculty**
+
+### Body:
+
+```json
+{
+  "department": "CSE",
+  "position": "Professor",
+  "researchInterests": ["AI", "ML"],
+  "teachingAreas": ["DSA"],
+  "autoTags": ["ai", "ml"]
+}
+```
+
+---
+
+## 🔥 What it does:
+
+* Creates profile
+* Used for **AI routing in requests**
+
+---
+
+# 📩 3. REQUEST SYSTEM (CORE)
+
+From: 
+
+---
+
+# 🟢 CREATE REQUEST
+
+## POST `/request`
+
+### Body:
+
+```json
+{
+  "type": "leave",
+  "title": "Medical Leave",
+  "description": "Fever",
+  "meta": {}
+}
+```
+
+---
+
+## 🧠 WHAT HAPPENS (IMPORTANT)
+
+From your controller: 
+
+👉 Backend automatically:
+
+* Gets your **department**
+* Finds:
+
+  * HOD
+  * Principal
+* Creates steps like:
+
+```json
+[
+  { "order": 1, "approver": "HOD_ID" },
+  { "order": 2, "approver": "PRINCIPAL_ID" }
+]
+```
+
+👉 YOU DO NOT SEND steps manually ❗
+
+---
+
+## ✅ Response:
+
+```json
+{
+  "_id": "REQUEST_ID",
+  "currentStep": 0,
+  "overallStatus": "pending"
+}
+```
+
+---
+
+# 📥 GET REQUESTS
+
+## GET `/request`
+
+---
+
+## 🧠 BEHAVIOR (VERY IMPORTANT)
+
+### If user = student:
+
+👉 Returns **your own requests**
+
+---
+
+### If user = faculty/hod/admin:
+
+👉 Returns requests where:
+
+* you are approver
+* AND status = pending
+
+---
+
+---
+
+# 📄 GET SINGLE REQUEST
+
+## GET `/request/:id`
+
+Example:
+
+```
+GET /request/64abc123
+```
+
+---
+
+# ✅ APPROVE / REJECT
+
+## POST `/request/action`
+
+---
+
+## Body:
+
+```json
+{
+  "requestId": "REQUEST_ID",
+  "action": "approve",
+  "remarks": "ok"
+}
+```
+
+---
+
+## ⚠️ Allowed actions:
+
+```json
+"approve"
+"reject"
+```
+
+---
+
+# 🧠 WHAT HAPPENS (CRITICAL)
+
+From: 
+
+---
+
+## CASE 1: APPROVE
+
+### If NOT last step:
+
+```json
+"currentStep"++
+```
+
+👉 Goes to next approver
+
+---
+
+### If LAST step:
+
+```json
+"overallStatus": "approved"
+```
+
+---
+
+## CASE 2: REJECT
+
+```json
+"overallStatus": "rejected"
+```
+
+👉 Ends immediately
+
+---
+
+## ALSO:
+
+* Notification created
+* Next approver notified
+
+---
+
+# 🔒 AUTH LOGIC (VERY IMPORTANT)
+
+From routes:
+
+```js
+.post(protect, ...)
+```
+
+👉 Means:
+
+* You MUST be logged in (cookie required)
+
+---
+
+```js
+authorize('faculty', 'admin')
+```
+
+👉 Means:
+
+* Only faculty/admin can approve
+
+---
+
+---
+
+# 🧪 FULL POSTMAN FLOW (DO THIS EXACTLY)
+
+---
+
+## 1. Register users
+
+### Student:
+
+```json
+{
+  "name": "Student",
+  "email": "s@test.com",
+  "password": "123",
+  "role": "student"
+}
+```
+
+---
+
+### HOD:
+
+```json
+{
+  "name": "HOD",
+  "email": "h@test.com",
+  "password": "123",
+  "role": "hod"
+}
+```
+
+---
+
+### Principal:
+
+```json
+{
+  "name": "Principal",
+  "email": "p@test.com",
+  "password": "123",
+  "role": "principal"
+}
+```
+
+---
+
+## 2. Login as student
+
+👉 Cookie gets stored
+
+---
+
+## 3. CREATE REQUEST
+
+```json
+{
+  "type": "leave",
+  "title": "Leave",
+  "description": "Sick"
+}
+```
+
+---
+
+## 4. Login as HOD (new tab)
+
+👉 Cookie changes
+
+---
+
+## 5. GET `/request`
+
+👉 Should show request
+
+---
+
+## 6. APPROVE
+
+```json
+{
+  "requestId": "ID",
+  "action": "approve"
+}
+```
+
+---
+
+## 7. Login as Principal
+
+---
+
+## 8. GET `/request`
+
+👉 Should show same request
+
+---
+
+## 9. APPROVE
+
+---
+
+## 10. DONE 🎉
+
+---
+
+# ⚠️ COMMON MISTAKES (YOU WILL HIT THESE)
+
+---
+
+## ❌ “Unauthorized”
+
+👉 Means:
+
+* Cookie missing
+* You didn’t login
+
+---
+
+## ❌ No requests showing
+
+👉 Because:
+
+* Not your turn (`currentStep` mismatch)
+
+---
+
+## ❌ No HOD/Principal
+
+👉 Because:
+
+* Department not linked
+
+---
+
+---
+
+# 🏁 FINAL UNDERSTANDING
+
+👉 YOU DO NOT control flow manually
+
+👉 Backend does:
+
+* approval chain
+* routing
+* notifications
+
+---
+
+# 🚀 If you want next
+
+I can:
+
+* Debug your exact API live
+* Show how to connect frontend
+* OR simplify this system for demo
+
+Just say 👍
