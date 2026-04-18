@@ -1,15 +1,38 @@
 from services.llm.llm_client import call_llm
-from services.llm.prompts import TAG_PROMPT
-from utils.json_parser import safe_parse
+from services.llm.prompts import TAG_GENERATOR_SYSTEM
+from models.tag_model import TagInput, TagOutput
+from utils.json_parser import safe_parse_json
+from utils.logger import logger
 
-def generate_tags(data: dict):
-    prompt = TAG_PROMPT.replace("{input}", str(data))
 
-    res = call_llm(prompt)
+async def generate_tags(inp: TagInput) -> TagOutput:
+    """
+    Generates semantic tags for any campus entity text.
+    Used for ProfessorProfile.autoTags, Issue categorization, etc.
+    """
+    system = TAG_GENERATOR_SYSTEM.format(
+        max_tags=inp.max_tags,
+        context=inp.context or "general",
+    )
 
-    tags = safe_parse(res)
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user",   "content": inp.text},
+    ]
 
-    if not tags:
-        return ["general", "faculty"]
+    try:
+        raw = await call_llm(messages, json_mode=True, temperature=0.2, max_tokens=200)
+        data = safe_parse_json(raw)
 
-    return tags
+        if data and isinstance(data.get("tags"), list):
+            tags = [str(t).lower().replace(" ", "-") for t in data["tags"]][: inp.max_tags]
+            return TagOutput(tags=tags, entity_id=inp.entity_id)
+
+    except Exception as e:
+        logger.warning(f"Tag generation failed: {e}")
+
+    # Fallback: simple keyword extraction
+    words = inp.text.lower().split()
+    stop  = {"the","a","an","is","in","of","to","and","for","with","on","at","by","from"}
+    tags  = list(dict.fromkeys(w for w in words if len(w) > 4 and w not in stop))[: inp.max_tags]
+    return TagOutput(tags=tags, entity_id=inp.entity_id)
