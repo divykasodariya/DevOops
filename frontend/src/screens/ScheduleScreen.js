@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { API_BASE } from '../config/api';
@@ -155,6 +156,23 @@ export default function ScheduleScreen() {
             <Text style={styles.todayBtnText}>Today</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push('/book-space')}
+          style={styles.bookSpaceShadow}
+        >
+          <LinearGradient
+            colors={['#e7c355', '#c59d2b']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.bookSpaceBtn}
+          >
+            <Ionicons name="business-outline" size={20} color={theme.darkText} style={{ marginRight: 10 }} />
+            <Text style={styles.bookSpaceBtnText}>Book a Space</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.darkText} style={{ marginLeft: 8 }} />
+          </LinearGradient>
+        </TouchableOpacity>
 
         <View style={styles.weeklyStrip}>
           {getWeeklyStrip().map((item, index) => (
@@ -310,6 +328,31 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   todayBtnText: { fontFamily: FONTS.semibold, fontSize: 12, color: theme.primary },
+
+  bookSpaceShadow: {
+    marginBottom: 20,
+    borderRadius: 16,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bookSpaceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 52,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+  },
+  bookSpaceBtnText: {
+    fontFamily: FONTS.bold,
+    fontSize: 16,
+    color: theme.darkText,
+    flex: 1,
+    textAlign: 'center',
+  },
 
   weeklyStrip: {
     flexDirection: 'row',

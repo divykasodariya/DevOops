@@ -92,6 +92,49 @@ export const getMySchedule = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────
+// GET /schedule/conflicts?room=LIB-A&start=ISO&end=ISO
+// Preflight: overlapping active bookings for the same room (no DB write)
+// ─────────────────────────────────────────────
+export const checkRoomConflict = async (req, res) => {
+  try {
+    const { room, start, end } = req.query;
+
+    if (!room || !start || !end) {
+      return res.status(400).json({
+        message: 'room, start, and end query params are required (ISO 8601 strings).',
+      });
+    }
+
+    const startAt = new Date(start);
+    const endAt = new Date(end);
+    if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+      return res.status(400).json({ message: 'Invalid start or end date.' });
+    }
+    if (endAt <= startAt) {
+      return res.json({ hasConflict: false, clashes: [], invalidRange: true });
+    }
+
+    const clashes = await Schedule.find({
+      room: String(room),
+      isActive: true,
+      start: { $lt: endAt },
+      end: { $gt: startAt },
+    })
+      .select('_id start end title type')
+      .sort({ start: 1 })
+      .limit(20)
+      .lean();
+
+    res.json({
+      hasConflict: clashes.length > 0,
+      clashes,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────
 // GET /schedule/slots?room=LH-301&date=2025-04-18
 // Returns free 1-hour slots for a room on a given day (8am–6pm)
 // ─────────────────────────────────────────────
