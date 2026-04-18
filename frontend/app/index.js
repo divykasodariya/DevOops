@@ -1,18 +1,42 @@
-import { useFonts } from "expo-font";
-import AppNavigator from "./src/navigation/AppNavigator";
-import { Text } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 
-export default function App() {
-  const [fontsLoaded] = useFonts({
-    "Manrope-Regular": require("./assets/fonts/Manrope-Regular.ttf"),
-    "Manrope-Medium": require("./assets/fonts/Manrope-Medium.ttf"),
-    "Manrope-SemiBold": require("./assets/fonts/Manrope-SemiBold.ttf"),
-    "Manrope-Bold": require("./assets/fonts/Manrope-Bold.ttf"),
-  });
+export default function LoginScreen() {
+  const router = useRouter();
 
-  if (!fontsLoaded) {
-    return null; // or loading screen
-  }
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>AetherApp</Text>
 
-  return <AppNavigator />;
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push("/dashboard")}
+      >
+        <Text style={styles.buttonText}>Go to Dashboard</Text>
+      </TouchableOpacity>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#1A1008",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    color: "white",
+    fontSize: 28,
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: "#F5D060",
+    padding: 15,
+    borderRadius: 10,
+  },
+  buttonText: {
+    color: "#1A1008",
+    fontWeight: "bold",
+  },
+});
