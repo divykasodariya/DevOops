@@ -5,4 +5,6 @@ export const COLORS = {
   gold: "#F5D060",
   muted: "#A89070",
   error: "#EF5350",
+  white: "#FFFFFF",
+  textSecondary: "#8A7A66",
 };

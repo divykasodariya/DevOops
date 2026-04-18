@@ -20,17 +20,23 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
-const corsOptions = {
-    origin: [
-        'http://localhost:3000',
-        'http://localhost:5173'
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}
-app.use(cors(corsOptions));
-
+// const corsOptions = {
+//     origin: [
+//         'http://localhost:3000',
+//         'http://localhost:5173',
+//         'http://localhost:8081',
+//         'http://localhost:8080',
+//         // 'http://10.10.70.134:8081',
+//     ],
+//     credentials: true,
+//     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//     allowedHeaders: ['Content-Type', 'Authorization']
+// }
+// app.use(cors(corsOptions));
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
 app.use('/auth', authRoutes);
 app.use('/prof', professorRoutes);
 app.use('/request', requestRoutes);
