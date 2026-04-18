@@ -33,7 +33,7 @@ export default function MakeRequestScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [approvers, setApprovers] = useState([]);
   const [loadingApprovers, setLoadingApprovers] = useState(true);
-  const [steps, setSteps] = useState([{ approver: '', role: '', status: 'pending', remarks: '' }]);
+  const [steps, setSteps] = useState([{ approver: '', role: '', email: '', status: 'pending', remarks: '' }]);
 
   const config = useMemo(() => {
     if (kind === 'issue') {
@@ -85,7 +85,7 @@ export default function MakeRequestScreen() {
   };
 
   const addStep = () => {
-    setSteps((prev) => [...prev, { approver: '', role: '', status: 'pending', remarks: '' }]);
+    setSteps((prev) => [...prev, { approver: '', role: '', email: '', status: 'pending', remarks: '' }]);
   };
 
   const removeStep = (index) => {
@@ -102,15 +102,53 @@ export default function MakeRequestScreen() {
       return;
     }
 
-    const invalidStep = steps.find((step) => !step.approver || !step.role);
-    if (invalidStep) {
-      Alert.alert('Required', 'Each step must have an approver and role.');
-      return;
-    }
-
     try {
       setSubmitting(true);
       const token = await AsyncStorage.getItem('token');
+      const resolveApproverByEmail = async (email, role) => {
+        const qp = new URLSearchParams({
+          email: String(email || '').trim().toLowerCase(),
+        });
+        if (role) qp.set('role', role);
+
+        const res = await fetch(`${API_BASE}/request/resolve-approver?${qp.toString()}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || `Could not resolve approver for ${email}`);
+        }
+        return data;
+      };
+
+      const normalizedSteps = [];
+      for (let index = 0; index < steps.length; index += 1) {
+        const step = steps[index];
+        let approverId = step.approver;
+        let role = step.role;
+        const email = step.email?.trim().toLowerCase();
+
+        if (!approverId && email) {
+          const resolved = await resolveApproverByEmail(email, role);
+          approverId = resolved?._id;
+          role = resolved?.role || role;
+        }
+
+        if (!approverId || !role) {
+          Alert.alert('Required', `Step ${index + 1} needs a valid approver id (or email) and role.`);
+          setSubmitting(false);
+          return;
+        }
+
+        normalizedSteps.push({
+          order: index + 1,
+          approver: approverId,
+          role,
+          status: 'pending',
+          remarks: step.remarks?.trim() || '',
+        });
+      }
+
       const res = await fetch(`${API_BASE}/request`, {
         method: 'POST',
         headers: {
@@ -121,13 +159,7 @@ export default function MakeRequestScreen() {
           type: requestType || config.type,
           title: title.trim(),
           description: description.trim(),
-          steps: steps.map((step, index) => ({
-            order: index + 1,
-            approver: step.approver,
-            role: step.role,
-            status: 'pending',
-            remarks: step.remarks?.trim() || '',
-          })),
+          steps: normalizedSteps,
           meta: {
             source: kind === 'issue' ? 'report_issue' : 'make_request',
             category: kind === 'issue' ? 'issue' : 'request',
@@ -234,7 +266,9 @@ export default function MakeRequestScreen() {
                       <TouchableOpacity
                         key={ap._id}
                         style={[styles.approverChip, selected && styles.approverChipActive]}
-                        onPress={() => updateStep(index, { approver: ap._id, role: ap.role })}
+                        onPress={() =>
+                          updateStep(index, { approver: ap._id, role: ap.role, email: (ap.email || '').toLowerCase() })
+                        }
                         activeOpacity={0.8}
                       >
                         <Text style={[styles.approverChipText, selected && styles.approverChipTextActive]}>
@@ -244,6 +278,16 @@ export default function MakeRequestScreen() {
                     );
                   })}
                 </View>
+
+                <TextInput
+                  value={step.email}
+                  onChangeText={(text) => updateStep(index, { email: text })}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  placeholder="Or enter approver email (e.g. hod@college.edu)"
+                  placeholderTextColor="#8f846f"
+                  style={styles.input}
+                />
 
                 <TextInput
                   value={step.remarks}
