@@ -88,6 +88,7 @@ export default function StudentDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [askText, setAskText] = useState('');
+  const [schedExpanded, setSchedExpanded] = useState(false);
 
   useEffect(() => { bootstrap(); }, []);
 
@@ -147,11 +148,11 @@ export default function StudentDashboard() {
     return 'Good evening';
   })();
 
-  const nextClass = (() => {
+  const todaySchedules = schedules.filter(s => {
+    const d = new Date(s.start);
     const now = new Date();
-    return schedules.find(s => new Date(s.start) > now) || schedules[0] || null;
-  })();
-
+    return d.toDateString() === now.toDateString();
+  });
   const fmtTime = (iso) => {
     const d = new Date(iso);
     let h = d.getHours(); const m = d.getMinutes();
@@ -201,36 +202,6 @@ export default function StudentDashboard() {
           </TouchableOpacity>
         </View>
 
-        {/* ─── HERO: NEXT CLASS ─── */}
-        <View style={s.hero}>
-          <View style={s.heroOverlay} />
-          <View style={{ zIndex: 1 }}>
-            <View style={s.heroTop}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.heroLabel}>NEXT CLASS</Text>
-                <Text style={s.heroTitle} numberOfLines={2}>
-                  {nextClass ? (nextClass.course?.name || nextClass.title) : 'No upcoming class'}
-                </Text>
-              </View>
-              {nextClass && (
-                <View style={s.timePill}>
-                  <Feather name="clock" size={13} color={GOLD_DIM} style={{ marginRight: 5 }} />
-                  <Text style={s.timePillText}>{fmtTime(nextClass.start)}</Text>
-                </View>
-              )}
-            </View>
-            {nextClass && (
-              <View style={s.locRow}>
-                <Feather name="map-pin" size={15} color={TEXT_SECONDARY} style={{ marginRight: 6 }} />
-                <Text style={s.locText}>{nextClass.room || nextClass.location || 'TBA'}</Text>
-              </View>
-            )}
-            <TouchableOpacity style={s.schedBtn} activeOpacity={0.8}>
-              <Text style={s.schedBtnText}>View Schedule</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* ─── 2-COL: TASKS + ATTENDANCE ─── */}
         <View style={s.grid}>
           {/* Pending Tasks */}
@@ -264,6 +235,61 @@ export default function StudentDashboard() {
             <Text style={s.attStatus}>{attendance.status}</Text>
           </View>
         </View>
+
+        {/* ─── TODAY'S SCHEDULE ─── */}
+        <View style={s.schedSection}>
+          <View style={s.schedHead}>
+            <Text style={s.schedTitle}>Today's Schedule</Text>
+            {(todaySchedules.length > 1 || schedules.length > 1) && (
+              <TouchableOpacity onPress={() => setSchedExpanded(!schedExpanded)}>
+                <Text style={s.viewAll}>{schedExpanded ? 'Show Less' : 'View All'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {todaySchedules.length === 0 && schedules.length === 0 ? (
+            <Text style={s.emptyT}>No classes scheduled.</Text>
+          ) : (
+            <View style={s.timeline}>
+              <View style={s.tlLine} />
+              {(todaySchedules.length > 0 ? todaySchedules : schedules).slice(0, schedExpanded ? undefined : 1).map((item) => {
+                const h = new Date(item.start).getHours();
+                const ap = h >= 12 ? 'PM' : 'AM';
+                const hh = (h % 12 || 12).toString().padStart(2, '0');
+                return (
+                  <View key={item._id} style={s.tlItem}>
+                    <View style={s.tlTimeCol}>
+                      <View style={s.tlCircle}>
+                        <Text style={s.tlH}>{hh}</Text>
+                        <Text style={s.tlAp}>{ap}</Text>
+                      </View>
+                    </View>
+                    <View style={s.tlCard}>
+                      <View style={s.tlCardTop}>
+                        <Text style={s.tlTitle} numberOfLines={2}>{item.course?.name || item.title}</Text>
+                        <View style={s.tlBadge}>
+                          <Text style={s.tlBadgeT}>{item.type === 'class' ? 'Lecture' : item.type}</Text>
+                        </View>
+                      </View>
+                      <View style={s.tlDetails}>
+                        <View style={s.tlDetailRow}>
+                          <Feather name="map-pin" size={13} color={TEXT_SECONDARY} style={{ marginRight: 5 }} />
+                          <Text style={s.tlDetailT}>{item.room || item.location || 'TBA'}</Text>
+                        </View>
+                        <View style={s.tlDetailRow}>
+                          <Feather name="clock" size={13} color={TEXT_SECONDARY} style={{ marginRight: 5 }} />
+                          <Text style={s.tlDetailT}>{fmtTime(item.start)} - {fmtTime(item.end)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+
+
 
         {/* ─── ANNOUNCEMENTS ─── */}
         <View style={s.annSection}>
@@ -346,18 +372,27 @@ const s = StyleSheet.create({
   bellBadge: { position: 'absolute', top: 2, right: 2, backgroundColor: '#EF5350', width: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#16130c' },
   bellBadgeText: { fontFamily: FONTS.bold, fontSize: 9, color: '#fff' },
 
-  // hero
-  hero: { backgroundColor: CARD_BG, borderRadius: 20, padding: 22, marginBottom: 16, overflow: 'hidden' },
-  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(245,208,96,0.05)' },
-  heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  heroLabel: { fontFamily: FONTS.medium, fontSize: 11, color: GOLD_DIM, letterSpacing: 2, marginBottom: 6 },
-  heroTitle: { fontFamily: FONTS.semibold, fontSize: 21, color: TEXT_PRIMARY, lineHeight: 27 },
-  timePill: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#38342c', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1, borderColor: CARD_BORDER, marginLeft: 10 },
-  timePillText: { fontFamily: FONTS.medium, fontSize: 12, color: TEXT_PRIMARY },
-  locRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
-  locText: { fontFamily: FONTS.regular, fontSize: 14, color: TEXT_SECONDARY },
-  schedBtn: { alignSelf: 'flex-start', backgroundColor: GOLD, borderRadius: 22, paddingHorizontal: 22, paddingVertical: 11 },
-  schedBtnText: { fontFamily: FONTS.semibold, fontSize: 12, color: '#16130c', letterSpacing: 0.3 },
+  // schedule timeline
+  schedSection: { marginBottom: 24 },
+  schedHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 18 },
+  schedTitle: { fontFamily: FONTS.semibold, fontSize: 20, color: TEXT_PRIMARY },
+  viewAll: { fontFamily: FONTS.medium, fontSize: 13, color: GOLD },
+  emptyT: { fontFamily: FONTS.regular, fontSize: 13, color: TEXT_SECONDARY, fontStyle: 'italic' },
+  timeline: { paddingLeft: 6 },
+  tlLine: { position: 'absolute', left: 29, top: 22, bottom: 0, width: 2, backgroundColor: '#2d2a22' },
+  tlItem: { flexDirection: 'row', marginBottom: 18 },
+  tlTimeCol: { width: 48, alignItems: 'center', zIndex: 1 },
+  tlCircle: { width: 46, height: 46, borderRadius: 23, borderWidth: 1.5, borderColor: GOLD, backgroundColor: '#16130c', justifyContent: 'center', alignItems: 'center' },
+  tlH: { fontFamily: FONTS.semibold, fontSize: 13, color: GOLD, lineHeight: 15 },
+  tlAp: { fontFamily: FONTS.medium, fontSize: 9, color: GOLD },
+  tlCard: { flex: 1, marginLeft: 16, backgroundColor: CARD_BG, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: CARD_BORDER },
+  tlCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
+  tlTitle: { flex: 1, fontFamily: FONTS.semibold, fontSize: 15, color: TEXT_PRIMARY, marginRight: 8 },
+  tlBadge: { backgroundColor: 'rgba(245,208,96,0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  tlBadgeT: { fontFamily: FONTS.medium, fontSize: 10, color: GOLD },
+  tlDetails: { flexDirection: 'row', flexWrap: 'wrap' },
+  tlDetailRow: { flexDirection: 'row', alignItems: 'center', marginRight: 18, marginTop: 2 },
+  tlDetailT: { fontFamily: FONTS.medium, fontSize: 12, color: TEXT_SECONDARY },
 
   // grid
   grid: { flexDirection: 'row', gap: 14, marginBottom: 28 },

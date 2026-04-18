@@ -4,17 +4,13 @@ import { Schedule } from '../models/Schedule.js';
 // ─────────────────────────────────────────────
 // GET /attendance/overview — Attendance % for logged-in user
 // Works for BOTH students and faculty
-// Strategy:
-//   1. Check Attendance model (real marked attendance)
-//   2. If no records, fallback to Schedule audienceIds
-//   3. If nothing at all, return clean "No Data"
 // ─────────────────────────────────────────────
 export const getAttendanceOverview = async (req, res) => {
   try {
     const userId = req.user._id;
     const userRole = req.user.role;
 
-    // ── FACULTY PATH: return stats for classes they teach ──
+    // ── FACULTY PATH ──
     if (userRole === 'faculty' || userRole === 'hod') {
       const markedByMe = await Attendance.find({ markedBy: userId });
 
@@ -54,7 +50,6 @@ export const getAttendanceOverview = async (req, res) => {
     }
 
     // ── STUDENT PATH ──
-    // Step 1: Try the Attendance model (real data)
     const attendanceDocs = await Attendance.find({
       'records.student': userId
     });
@@ -86,44 +81,28 @@ export const getAttendanceOverview = async (req, res) => {
       });
     }
 
-    // Step 2: Fallback to Schedule audienceIds
+    // Student fallback to Schedule audienceIds
     const allSchedules = await Schedule.find({ isActive: true });
-
-    if (allSchedules.length === 0) {
-      return res.json({ percentage: 0, totalClasses: 0, attended: 0, status: 'No Data' });
-    }
-
     let totalClasses = 0;
     let attended = 0;
 
     allSchedules.forEach(schedule => {
-      // Only count schedules relevant to this student
       const isInAudience = schedule.audienceIds?.some(
         id => id.toString() === userId.toString()
       );
-      const isForAll = schedule.audience === 'all';
-
-      if (isInAudience || isForAll) {
+      if (isInAudience) {
         totalClasses++;
-        // If student is explicitly in audienceIds, count as attended
-        if (isInAudience) {
-          attended++;
-        }
+        attended++;
       }
     });
 
-    // If student isn't in any schedule, return no data
-    if (totalClasses === 0) {
-      return res.json({ percentage: 0, totalClasses: 0, attended: 0, status: 'No Data' });
-    }
-
     const percentage = totalClasses > 0 ? Math.round((attended / totalClasses) * 100) : 0;
 
-    res.json({
+    return res.json({
       percentage,
       totalClasses,
       attended,
-      status: percentage >= 75 ? 'On Track' : percentage >= 60 ? 'At Risk' : 'Critical',
+      status: totalClasses > 0 ? (percentage >= 75 ? 'On Track' : 'At Risk') : 'No Data',
       source: 'schedule',
     });
   } catch (error) {
@@ -137,7 +116,6 @@ export const getAttendanceOverview = async (req, res) => {
 export const markAttendance = async (req, res) => {
   try {
     const { courseId, date, records } = req.body;
-    // records: [{ student: ObjectId, status: 'present'|'absent'|'late'|'od' }]
 
     if (!courseId || !date || !records || !records.length) {
       return res.status(400).json({ message: 'courseId, date, and records are required.' });
@@ -195,7 +173,6 @@ export const getFacultyStats = async (req, res) => {
       .populate('course', 'name code')
       .sort({ date: -1 });
 
-    // Group by course
     const courseMap = {};
     records.forEach(doc => {
       const courseId = doc.course?._id?.toString() || 'unknown';

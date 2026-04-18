@@ -1,4 +1,5 @@
 import { Notification } from '../models/Notification.js';
+import User from '../models/User.js';
 
 // ─────────────────────────────────────────────
 // GET /notifications/my — Get notifications for logged-in user
@@ -21,6 +22,7 @@ export const getMyNotifications = async (req, res) => {
 export const getAnnouncements = async (req, res) => {
   try {
     const announcements = await Notification.find({
+      recipient: req.user._id,
       type: 'announcement'
     })
       .sort({ createdAt: -1 })
@@ -37,16 +39,47 @@ export const getAnnouncements = async (req, res) => {
 // ─────────────────────────────────────────────
 export const createAnnouncement = async (req, res) => {
   try {
-    const { title, body, recipientId } = req.body;
+    const { title, body, recipientId, targetAudience = 'all' } = req.body;
 
-    const notification = await Notification.create({
-      recipient: recipientId || req.user._id,
-      title,
-      body,
-      type: 'announcement',
+    if (!title?.trim() || !body?.trim()) {
+      return res.status(400).json({ message: 'Title and body are required.' });
+    }
+
+    let recipientIds = [];
+
+    if (recipientId) {
+      recipientIds = [recipientId];
+    } else {
+      const audienceRoleMap = {
+        student: ['student'],
+        faculty: ['faculty', 'hod', 'principal', 'admin', 'support'],
+        all: [],
+      };
+
+      const roles = audienceRoleMap[targetAudience] ?? audienceRoleMap.all;
+      const query = roles.length ? { role: { $in: roles }, isActive: true } : { isActive: true };
+      const users = await User.find(query).select('_id');
+      recipientIds = users.map((user) => user._id);
+    }
+
+    if (!recipientIds.length) {
+      return res.status(404).json({ message: 'No recipients found for selected audience.' });
+    }
+
+    const notifications = await Notification.insertMany(
+      recipientIds.map((id) => ({
+        recipient: id,
+        title: title.trim(),
+        body: body.trim(),
+        type: 'announcement',
+      }))
+    );
+
+    res.status(201).json({
+      message: 'Announcement published successfully.',
+      createdCount: notifications.length,
+      targetAudience,
     });
-
-    res.status(201).json(notification);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

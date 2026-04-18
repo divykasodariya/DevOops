@@ -6,9 +6,9 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  SafeAreaView
+  ScrollView
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import InputField from '../components/InputField';
@@ -57,7 +57,14 @@ export default function LoginScreen() {
         await AsyncStorage.setItem('token', data.token);
       }
 
-      router.replace('/dashboard');
+      const userRole = data.role || role || 'student';
+      if (userRole === 'faculty' || userRole === 'hod') {
+        router.replace('/faculty-dashboard');
+      } else if (userRole === 'admin' || userRole === 'principal') {
+        router.replace('/admin-dashboard');
+      } else {
+        router.replace('/dashboard');
+      }
     } catch (err) {
       setError('Network error. Is the server running?');
     } finally {
