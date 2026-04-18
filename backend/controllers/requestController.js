@@ -3,6 +3,7 @@ import ProfessorProfile from '../models/ProfessorProfile.js';
 import { Notification } from '../models/Notification.js';
 import { Department } from '../models/Department.js';
 import { Schedule } from '../models/Schedule.js';
+import User from '../models/User.js';
 
 const calculateMatchScore = (requestTags, professorInterests) => {
   if (!requestTags || requestTags.length === 0) return 0;
@@ -19,12 +20,55 @@ const calculateMatchScore = (requestTags, professorInterests) => {
 
 export const createRequest = async (req, res) => {
   try {
-    const { type, title, description, meta } = req.body;
+    const { type, title, description, meta, steps: customSteps } = req.body;
 
     let steps = [];
+    const validRoles = ['faculty', 'hod', 'principal', 'admin', 'support'];
+    const validStatuses = ['pending', 'approved', 'rejected', 'escalated'];
+
+    if (Array.isArray(customSteps) && customSteps.length > 0) {
+      const normalizedSteps = customSteps
+        .map((step, index) => ({
+          order: Number(step.order) || index + 1,
+          approver: step.approver,
+          role: step.role,
+          status: step.status || 'pending',
+          remarks: step.remarks || '',
+        }))
+        .sort((a, b) => a.order - b.order);
+
+      const hasInvalidStep = normalizedSteps.some(
+        (step) =>
+          !step.approver ||
+          !validRoles.includes(step.role) ||
+          !validStatuses.includes(step.status)
+      );
+
+      if (hasInvalidStep) {
+        return res.status(400).json({
+          message: 'Each step must include valid approver, role, and status.',
+        });
+      }
+
+      const approverIds = normalizedSteps.map((step) => step.approver);
+      const approvers = await User.find({ _id: { $in: approverIds } }).select('_id role');
+      const approverMap = new Map(approvers.map((u) => [u._id.toString(), u.role]));
+      const mismatch = normalizedSteps.find((step) => {
+        const dbRole = approverMap.get(step.approver.toString());
+        return !dbRole || dbRole !== step.role;
+      });
+
+      if (mismatch) {
+        return res.status(400).json({
+          message: 'Step approver role mismatch. Please refresh approvers and try again.',
+        });
+      }
+
+      steps = normalizedSteps;
+    }
 
     // Smart routing for research or lor
-    if (type === 'research' || type === 'lor') {
+    if (steps.length === 0 && (type === 'research' || type === 'lor')) {
       const professors = await ProfessorProfile.find({});
 
       let bestMatchScore = -1;
@@ -48,7 +92,7 @@ export const createRequest = async (req, res) => {
           status: 'pending'
         });
       }
-    } else {
+    } else if (steps.length === 0) {
       // For other types like leave, room, build a chain.
       // E.g. HOD -> Principal. Just an example chain if department is known.
       if (req.user.department) {
@@ -273,6 +317,24 @@ export const getMyPendingRequests = async (req, res) => {
       .limit(10);
 
     res.json(requests);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /request/approvers — approver candidates
+// ─────────────────────────────────────────────
+export const getApproverCandidates = async (req, res) => {
+  try {
+    const users = await User.find({
+      role: { $in: ['faculty', 'hod', 'principal', 'admin', 'support'] },
+      isActive: true,
+    })
+      .select('_id name email role')
+      .sort({ name: 1 });
+
+    res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
