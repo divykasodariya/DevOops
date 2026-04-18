@@ -318,6 +318,13 @@ export default function StudentDashboard() {
             placeholderTextColor={TEXT_MUTED}
             value={askText}
             onChangeText={setAskText}
+            returnKeyType="send"
+            onSubmitEditing={() => {
+              const value = askText.trim();
+              if (!value) return;
+              router.push(`/ai-assistant?q=${encodeURIComponent(value)}`);
+              setAskText('');
+            }}
           />
           <TouchableOpacity style={styles.micBtn} activeOpacity={0.7}>
             <Feather name="mic" size={20} color={GOLD} />
@@ -335,7 +342,11 @@ export default function StudentDashboard() {
           <Text style={styles.navLbl}>SCHEDULE</Text>
         </TouchableOpacity>
         <View style={styles.fabWrap}>
-          <TouchableOpacity style={styles.fab} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.fab}
+            activeOpacity={0.8}
+            onPress={() => router.push('/ai-assistant')}
+          >
             <MaterialCommunityIcons name="robot-outline" size={24} color={BG} />
           </TouchableOpacity>
         </View>
