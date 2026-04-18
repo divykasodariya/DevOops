@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
     
-  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+   paddingTop: Platform.OS === 'android' ? 64 : 88 },
   scroll: {
     paddingHorizontal: 14,
     paddingTop: 10,
