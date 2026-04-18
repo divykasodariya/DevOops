@@ -1,9 +1,9 @@
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Animated,
+  Animated as RNAnimated,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -11,68 +11,84 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { Audio } from 'expo-av';
+import Reanimated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FONTS } from '../theme/typography';
 import { API_BASE } from '../config/api';
+import PressableScale from '../components/dashboard/PressableScale';
 
-const BG = '#16130c';
-const NAV_BG = '#0c0a07';
-const BUBBLE_ASSISTANT = '#2b2419';
-const BUBBLE_USER = '#f5d060';
-const TEXT_PRIMARY = '#e9e2d5';
-const TEXT_MUTED = '#9e947f';
-const TEXT_DARK = '#201a10';
-const GOLD = '#f5d060';
-const BORDER = 'rgba(77,70,54,0.35)';
-const CHAT_STORAGE_KEY = 'aether_chat_messages_v2';
-const HISTORY_STORAGE_KEY = 'aether_chat_history_v2';
-const TEXT_SECONDARY = '#b5aa95';
+const BG              = '#16130c';
+const NAV_BG          = '#0c0a07';
+const BUBBLE_ASSISTANT= '#2b2419';
+const BUBBLE_USER     = '#dfbb56';
+const TEXT_PRIMARY    = '#e9e2d5';
+const TEXT_MUTED      = '#9e947f';
+const TEXT_DARK       = '#201a10';
+const GOLD            = '#f5d060';
+const BORDER          = 'rgba(77,70,54,0.35)';
+const TEXT_SECONDARY  = '#b5aa95';
 
-const MAX_HISTORY = 12; // keep last N turns for LLM context
+const CHAT_STORAGE_KEY   = 'aether_chat_messages_v2';
+const HISTORY_STORAGE_KEY= 'aether_chat_history_v2';
+const MAX_HISTORY        = 12;
+
+// ─── Nav height constant (used for bottom offset) ───────────────────────────
+const NAV_H = Platform.OS === 'ios' ? 84 : 66;
+// Extra gap above keyboard so input bar doesn't sit flush against it
+const KEYBOARD_EXTRA_GAP = 10;
+// Height of the composer dock itself (input row)
+const COMPOSER_H = Platform.OS === 'ios' ? 62 : 58;
 
 export default function AIAssistantScreen() {
-  const router = useRouter();
-  const params = useLocalSearchParams();
-  const initialInput = typeof params?.q === 'string' ? params.q : '';
+  const router         = useRouter();
+  const params         = useLocalSearchParams();
+  const insets         = useSafeAreaInsets();
+  const initialInput   = typeof params?.q === 'string' ? params.q : '';
   const didInitFromQuery = useRef(false);
-  const scrollRef = useRef(null);
-  const recordingRef = useRef(null);
-  const [input, setInput] = useState(initialInput);
-  const [messages, setMessages] = useState([]);
-  const [llmHistory, setLlmHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef      = useRef(null);
+  const recordingRef   = useRef(null);
+
+  const [input, setInput]             = useState(initialInput);
+  const [messages, setMessages]       = useState([]);
+  const [llmHistory, setLlmHistory]   = useState([]);
+  const [isLoading, setIsLoading]     = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
-  // Dot animation for typing indicator
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+  // ── Typing-indicator dots ──────────────────────────────────────────────────
+  const dot1 = useRef(new RNAnimated.Value(0)).current;
+  const dot2 = useRef(new RNAnimated.Value(0)).current;
+  const dot3 = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
     if (!isLoading) return;
-    const anim = Animated.loop(
-      Animated.stagger(200, [
-        Animated.sequence([
-          Animated.timing(dot1, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(dot1, { toValue: 0, duration: 300, useNativeDriver: true }),
+    const anim = RNAnimated.loop(
+      RNAnimated.stagger(200, [
+        RNAnimated.sequence([
+          RNAnimated.timing(dot1, { toValue: 1, duration: 300, useNativeDriver: true }),
+          RNAnimated.timing(dot1, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]),
-        Animated.sequence([
-          Animated.timing(dot2, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(dot2, { toValue: 0, duration: 300, useNativeDriver: true }),
+        RNAnimated.sequence([
+          RNAnimated.timing(dot2, { toValue: 1, duration: 300, useNativeDriver: true }),
+          RNAnimated.timing(dot2, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]),
-        Animated.sequence([
-          Animated.timing(dot3, { toValue: 1, duration: 300, useNativeDriver: true }),
-          Animated.timing(dot3, { toValue: 0, duration: 300, useNativeDriver: true }),
+        RNAnimated.sequence([
+          RNAnimated.timing(dot3, { toValue: 1, duration: 300, useNativeDriver: true }),
+          RNAnimated.timing(dot3, { toValue: 0, duration: 300, useNativeDriver: true }),
         ]),
       ])
     );
@@ -80,6 +96,7 @@ export default function AIAssistantScreen() {
     return () => anim.stop();
   }, [isLoading]);
 
+  // ── Starter message ────────────────────────────────────────────────────────
   const starterMessages = useMemo(
     () => [
       {
@@ -92,7 +109,7 @@ export default function AIAssistantScreen() {
     []
   );
 
-  // Hydrate messages from storage
+  // ── Hydrate from AsyncStorage ──────────────────────────────────────────────
   useEffect(() => {
     const hydrate = async () => {
       try {
@@ -100,18 +117,12 @@ export default function AIAssistantScreen() {
           AsyncStorage.getItem(CHAT_STORAGE_KEY),
           AsyncStorage.getItem(HISTORY_STORAGE_KEY),
         ]);
-
         if (rawMsgs) {
           const parsed = JSON.parse(rawMsgs);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMessages(parsed);
-          } else {
-            setMessages(starterMessages);
-          }
+          setMessages(Array.isArray(parsed) && parsed.length > 0 ? parsed : starterMessages);
         } else {
           setMessages(starterMessages);
         }
-
         if (rawHistory) {
           const parsed = JSON.parse(rawHistory);
           if (Array.isArray(parsed)) setLlmHistory(parsed);
@@ -123,18 +134,16 @@ export default function AIAssistantScreen() {
     hydrate();
   }, [starterMessages]);
 
-  // Persist messages
   useEffect(() => {
     if (!messages.length) return;
     AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)).catch(() => {});
   }, [messages]);
 
-  // Persist LLM history
   useEffect(() => {
     AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(llmHistory)).catch(() => {});
   }, [llmHistory]);
 
-  // Handle initial query from deep link
+  // ── Deep-link initial query ────────────────────────────────────────────────
   useEffect(() => {
     const fromQuery = initialInput.trim();
     if (!fromQuery || !messages.length || didInitFromQuery.current) return;
@@ -143,14 +152,14 @@ export default function AIAssistantScreen() {
     setInput('');
   }, [initialInput, messages.length]);
 
-  // Keyboard listeners
+  // ── Keyboard listeners ─────────────────────────────────────────────────────
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const onShow = (event) => {
       setKeyboardVisible(true);
-      setKeyboardHeight(event?.endCoordinates?.height || 0);
+      setKeyboardHeight(event?.endCoordinates?.height ?? 0);
     };
     const onHide = () => {
       setKeyboardVisible(false);
@@ -159,48 +168,53 @@ export default function AIAssistantScreen() {
 
     const showSub = Keyboard.addListener(showEvent, onShow);
     const hideSub = Keyboard.addListener(hideEvent, onHide);
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
+    return () => { showSub.remove(); hideSub.remove(); };
   }, []);
 
+  // ── Cleanup recording on unmount ───────────────────────────────────────────
   useEffect(() => {
     return () => {
-      const rec = recordingRef.current;
-      if (rec) {
-        rec.stopAndUnloadAsync().catch(() => {});
-        recordingRef.current = null;
-      }
+      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
+      recordingRef.current = null;
     };
   }, []);
 
-  const canSend = useMemo(() => input.trim().length > 0 && !isLoading, [input, isLoading]);
+  // ── Input focus animation ──────────────────────────────────────────────────
+  const inputFocus = useSharedValue(0);
+  useEffect(() => {
+    inputFocus.value = withTiming(isInputFocused ? 1 : 0, { duration: 180 });
+  }, [isInputFocused, inputFocus]);
 
+  const inputWrapAnimatedStyle = useAnimatedStyle(() => ({
+    transform:     [{ scale: 1 + inputFocus.value * 0.01 }],
+    shadowOpacity: 0.08 + inputFocus.value * 0.12,
+    shadowRadius:  2    + inputFocus.value * 6,
+    elevation:     1    + inputFocus.value * 2,
+  }));
+
+  // ── Scroll helpers ─────────────────────────────────────────────────────────
   const scrollToEnd = useCallback(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 100);
   }, []);
 
+  // ── Send ───────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(async (text) => {
     if (!text?.trim()) return;
-
-    const now = new Date();
+    const now    = new Date();
     const userMsg = {
-      id: `u-${now.getTime()}`,
+      id:   `u-${now.getTime()}`,
       role: 'user',
       text: text.trim(),
       time: formatTime(now),
     };
-
     setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
     scrollToEnd();
 
     try {
       const token = await AsyncStorage.getItem('token');
-
-      const res = await fetch(`${API_BASE}/ai/chat`, {
-        method: 'POST',
+      const res   = await fetch(`${API_BASE}/ai/chat`, {
+        method:  'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -211,39 +225,37 @@ export default function AIAssistantScreen() {
         }),
       });
 
-      const data = await res.json();
+      const data      = await res.json();
       const replyText = data.reply || "Sorry, I couldn't process that. Please try again.";
-
-      const botMsg = {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        text: replyText,
-        time: formatTime(new Date()),
+      const botMsg    = {
+        id:        `a-${Date.now()}`,
+        role:      'assistant',
+        text:      replyText,
+        time:      formatTime(new Date()),
         toolCalls: data.tool_calls || [],
       };
 
       setMessages((prev) => [...prev, botMsg]);
-
-      // Update LLM history for context
       setLlmHistory((prev) => {
         const updated = [
           ...prev,
-          { role: 'user', content: text.trim() },
-          { role: 'assistant', content: replyText },
+          { role: 'user',      content: text.trim() },
+          { role: 'assistant', content: replyText   },
         ];
         return updated.slice(-MAX_HISTORY);
       });
-
     } catch (err) {
       console.error('AI chat error:', err);
-      const errorMsg = {
-        id: `e-${Date.now()}`,
-        role: 'assistant',
-        text: "I'm having trouble connecting right now. Please check your network and try again.",
-        time: formatTime(new Date()),
-        isError: true,
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id:      `e-${Date.now()}`,
+          role:    'assistant',
+          text:    "I'm having trouble connecting right now. Please check your network and try again.",
+          time:    formatTime(new Date()),
+          isError: true,
+        },
+      ]);
     } finally {
       setIsLoading(false);
       scrollToEnd();
@@ -264,8 +276,9 @@ export default function AIAssistantScreen() {
     AsyncStorage.removeItem(HISTORY_STORAGE_KEY).catch(() => {});
   };
 
+  // ── Voice recording ────────────────────────────────────────────────────────
   const stopRecordingAndUpload = useCallback(async () => {
-    const rec = recordingRef.current;
+    const rec          = recordingRef.current;
     recordingRef.current = null;
     setIsRecording(false);
     if (!rec) return;
@@ -274,13 +287,9 @@ export default function AIAssistantScreen() {
       setIsTranscribing(true);
       await rec.stopAndUnloadAsync();
       const uri = rec.getURI();
-      if (!uri) {
-        Alert.alert('Recording', 'Could not read the recording file.');
-        return;
-      }
+      if (!uri) { Alert.alert('Recording', 'Could not read the recording file.'); return; }
 
-      const token = await AsyncStorage.getItem('token');
-      // Native multipart upload — fetch()+FormData often throws "Network request failed" on Android.
+      const token  = await AsyncStorage.getItem('token');
       const result = await FileSystem.uploadAsync(`${API_BASE}/ai/transcribe`, uri, {
         httpMethod: 'POST',
         uploadType: FileSystem.FileSystemUploadType.MULTIPART,
@@ -290,20 +299,13 @@ export default function AIAssistantScreen() {
       });
 
       let data = {};
-      try {
-        data = result.body ? JSON.parse(result.body) : {};
-      } catch (_) {
-        data = {};
-      }
+      try { data = result.body ? JSON.parse(result.body) : {}; } catch (_) {}
       if (result.status < 200 || result.status >= 300) {
         throw new Error(data.message || `Transcription failed (${result.status})`);
       }
       const text = (data.text || '').trim();
       if (text) {
-        setInput((prev) => {
-          const next = prev.trim() ? `${prev.trim()} ${text}` : text;
-          return next;
-        });
+        setInput((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
       }
     } catch (err) {
       console.error('Transcribe error:', err);
@@ -315,10 +317,7 @@ export default function AIAssistantScreen() {
 
   const toggleMic = useCallback(async () => {
     if (isTranscribing) return;
-    if (isRecording) {
-      await stopRecordingAndUpload();
-      return;
-    }
+    if (isRecording) { await stopRecordingAndUpload(); return; }
     if (isLoading) return;
 
     try {
@@ -327,13 +326,11 @@ export default function AIAssistantScreen() {
         Alert.alert('Microphone', 'Allow microphone access to use voice input.');
         return;
       }
-
       await Audio.setAudioModeAsync({
-        allowsRecordingIOS:     true,
-        playsInSilentModeIOS:   true,
+        allowsRecordingIOS:      true,
+        playsInSilentModeIOS:    true,
         staysActiveInBackground: false,
       });
-
       const { recording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
@@ -347,8 +344,43 @@ export default function AIAssistantScreen() {
 
   const micDisabled = isTranscribing || (!isRecording && isLoading);
 
+  // ── Derived layout values ──────────────────────────────────────────────────
+  //
+  // When keyboard is visible:
+  //   • composer sits at  keyboardHeight + KEYBOARD_EXTRA_GAP  above the screen bottom
+  //   • KAV bottom margin = 0  (no nav shown)
+  //
+  // When keyboard is hidden:
+  //   • composer sits at  NAV_H  (above the nav bar)
+  //   • KAV bottom margin = NAV_H
+  //
+  // The KAV keyboardVerticalOffset compensates for the fixed header so that
+  // 'padding' mode on iOS lifts the content by exactly the right amount.
+
+  const HEADER_H = Platform.OS === 'ios' ? 56 : 52; // visual header height (no safe-area)
+  // iOS KAV offset = header + top safe-area inset (already consumed by SafeAreaView edges=['top'])
+  // We pass edges={['top']} so the SafeAreaView pads the top; the KAV sits below that.
+  const kavOffset = Platform.OS === 'ios' ? HEADER_H : 0;
+
+  // Bottom of the scroll thread must clear the composer dock.
+  // When keyboard is hidden the doc sits above the nav bar.
+  const threadPaddingBottom = COMPOSER_H + 8;
+
+  // Composer absolute bottom position:
+  //   keyboard visible → float above keyboard
+  //   keyboard hidden  → sit above nav bar
+  const composerBottom = keyboardVisible
+    ? keyboardHeight + KEYBOARD_EXTRA_GAP
+    : NAV_H;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
+    // edges={['top']} — let the component handle its own bottom spacing.
+    // This prevents the built-in SafeAreaView from adding bottom padding that
+    // fights with our manual composer positioning.
     <SafeAreaView style={styles.safe} edges={['top']}>
+
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <View style={styles.avatarWrap}>
@@ -357,355 +389,466 @@ export default function AIAssistantScreen() {
           <Text style={styles.brandTitle}>Aether AI</Text>
           <View style={styles.onlineDot} />
         </View>
-        <TouchableOpacity
+        <PressableScale
           style={styles.bellBtn}
-          activeOpacity={0.75}
           onPress={handleClearChat}
-          hitSlop={{
-            top: 10,
-            bottom: 10,
-            left: 10,
-            right: 10
-          }}>
+          scaleTo={0.95}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Feather name="trash-2" size={18} color={GOLD} />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
+
+      {/* ── Chat area + composer ── */}
+      {/*
+        KeyboardAvoidingView strategy:
+          iOS   → 'padding': adds padding to the bottom of the KAV equal to the
+                  keyboard height, pushing content up smoothly.
+          Android → 'height': shrinks the KAV height. On most Android devices
+                  the window is resized by the OS anyway (adjustResize), so
+                  'height' or 'padding' both work; 'height' is safer.
+      */}
       <KeyboardAvoidingView
-        style={[styles.kav, { marginBottom: keyboardVisible ? 0 : NAV_H }]}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'android' ? 64 : 88}>
+        style={styles.kav}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={kavOffset}
+      >
+        {/* Scroll thread */}
         <ScrollView
           ref={scrollRef}
           style={styles.thread}
-          contentContainerStyle={styles.threadContent}
+          contentContainerStyle={[
+            styles.threadContent,
+            { paddingBottom: threadPaddingBottom },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
-          onContentSizeChange={() => scrollToEnd()}
+          onContentSizeChange={scrollToEnd}
         >
-        <View style={styles.dayPill}>
-          <Text style={styles.dayPillText}>Today</Text>
-        </View>
+          <View style={styles.dayPill}>
+            <Text style={styles.dayPillText}>Today</Text>
+          </View>
 
-        {messages.map((msg) => {
-          const isUser = msg.role === 'user';
-          return (
-            <View key={msg.id} style={[styles.messageWrap, isUser ? styles.userWrap : styles.assistantWrap]}>
-              <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble,
-                msg.isError && styles.errorBubble]}>
-                <Text style={[styles.bubbleText, isUser ? styles.userBubbleText : styles.assistantBubbleText]}>
-                  {msg.text}
-                </Text>
-                {!!msg.card && (
-                  <View style={styles.inlineCard}>
-                    <View style={styles.inlineCardIcon}>
-                      <Feather name="book-open" size={16} color={GOLD} />
-                    </View>
-                    <View>
-                      <Text style={styles.inlineCardTitle}>{msg.card.title}</Text>
-                      <Text style={styles.inlineCardSubtitle}>{msg.card.subtitle}</Text>
-                    </View>
-                  </View>
-                )}
-                {/* Show tool call badges */}
-                {msg.toolCalls && msg.toolCalls.length > 0 && (
-                  <View style={styles.toolRow}>
-                    {msg.toolCalls.map((tc, i) => (
-                      <View key={i} style={styles.toolBadge}>
-                        <Feather name="zap" size={10} color={GOLD} />
-                        <Text style={styles.toolBadgeText}>{tc.tool}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-              <Text style={[styles.timeLabel, isUser ? styles.timeLabelUser : null]}>{msg.time}</Text>
-            </View>
-          );
-        })}
-
-        {/* Typing indicator */}
-        {isLoading && (
-          <View style={[styles.messageWrap, styles.assistantWrap]}>
-            <View style={[styles.bubble, styles.assistantBubble, styles.typingBubble]}>
-              <View style={styles.typingRow}>
-                {[dot1, dot2, dot3].map((dot, i) => (
-                  <Animated.View
-                    key={i}
+          {messages.map((msg) => {
+            const isUser = msg.role === 'user';
+            return (
+              <Reanimated.View
+                key={msg.id}
+                entering={FadeInDown.duration(220)}
+                style={[
+                  styles.messageWrap,
+                  isUser ? styles.userWrap : styles.assistantWrap,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.bubble,
+                    isUser ? styles.userBubble : styles.assistantBubble,
+                    msg.isError && styles.errorBubble,
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.typingDot,
-                      { transform: [{ translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -6] }) }] },
+                      styles.bubbleText,
+                      isUser ? styles.userBubbleText : styles.assistantBubbleText,
                     ]}
-                  />
-                ))}
+                  >
+                    {msg.text}
+                  </Text>
+                  {!!msg.card && (
+                    <View style={styles.inlineCard}>
+                      <View style={styles.inlineCardIcon}>
+                        <Feather name="book-open" size={16} color={GOLD} />
+                      </View>
+                      <View>
+                        <Text style={styles.inlineCardTitle}>{msg.card.title}</Text>
+                        <Text style={styles.inlineCardSubtitle}>{msg.card.subtitle}</Text>
+                      </View>
+                    </View>
+                  )}
+                  {msg.toolCalls && msg.toolCalls.length > 0 && (
+                    <View style={styles.toolRow}>
+                      {msg.toolCalls.map((tc, i) => (
+                        <PressableScale key={i} style={styles.toolBadge} scaleTo={0.97}>
+                          <Feather name="zap" size={10} color={GOLD} />
+                          <Text style={styles.toolBadgeText}>{tc.tool}</Text>
+                        </PressableScale>
+                      ))}
+                    </View>
+                  )}
+                </View>
+                <Text
+                  style={[
+                    styles.timeLabel,
+                    isUser ? styles.timeLabelUser : null,
+                  ]}
+                >
+                  {msg.time}
+                </Text>
+              </Reanimated.View>
+            );
+          })}
+
+          {/* Typing indicator */}
+          {isLoading && (
+            <View style={[styles.messageWrap, styles.assistantWrap]}>
+              <View style={[styles.bubble, styles.assistantBubble, styles.typingBubble]}>
+                <View style={styles.typingRow}>
+                  {[dot1, dot2, dot3].map((dot, i) => (
+                    <RNAnimated.View
+                      key={i}
+                      style={[
+                        styles.typingDot,
+                        {
+                          transform: [
+                            {
+                              translateY: dot.interpolate({
+                                inputRange:  [0, 1],
+                                outputRange: [0, -6],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
               </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
 
-      <View
-        style={[
-          styles.composerDock,
-          { bottom: keyboardVisible ? keyboardHeight : NAV_H },
-        ]}
-      >
-        <View style={styles.composerRow}>
-          <TouchableOpacity style={styles.plusBtn} activeOpacity={0.75}>
-            <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
-          <View style={styles.inputWrap}>
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              placeholder="Ask Aether"
-              placeholderTextColor={TEXT_MUTED}
-              style={styles.input}
-              returnKeyType="send"
-              onSubmitEditing={handleSend}
-              editable={!isLoading}
-            />
-            <TouchableOpacity
-              style={[styles.micBtn, isRecording && styles.micBtnRecording]}
-              onPress={toggleMic}
-              disabled={micDisabled}
-              activeOpacity={0.75}
+        {/* ── Composer dock — lives INSIDE KAV so it rides above the keyboard ── */}
+        <View style={styles.composerDock}>
+          <View style={styles.composerRow}>
+            <PressableScale style={styles.plusBtn} scaleTo={0.95}>
+              <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
+            </PressableScale>
+
+            <Reanimated.View
+              style={[
+                styles.inputWrap,
+                inputWrapAnimatedStyle,
+                isInputFocused && styles.inputWrapFocused,
+              ]}
             >
-              {isTranscribing ? (
-                <ActivityIndicator size="small" color={GOLD} />
-              ) : (
-                <Feather name={isRecording ? 'square' : 'mic'} size={18} color={GOLD} />
-              )}
-            </TouchableOpacity>
+              <TextInput
+                value={input}
+                onChangeText={setInput}
+                placeholder="Ask Aether"
+                placeholderTextColor={TEXT_MUTED}
+                style={styles.input}
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+                editable={!isLoading}
+                onFocus={() => setIsInputFocused(true)}
+                onBlur={() => setIsInputFocused(false)}
+              />
+              <PressableScale
+                style={[styles.micBtn, isRecording && styles.micBtnRecording]}
+                onPress={toggleMic}
+                disabled={micDisabled}
+                scaleTo={0.95}
+              >
+                {isTranscribing ? (
+                  <ActivityIndicator size="small" color={GOLD} />
+                ) : (
+                  <Feather
+                    name={isRecording ? 'square' : 'mic'}
+                    size={18}
+                    color={GOLD}
+                  />
+                )}
+              </PressableScale>
+            </Reanimated.View>
           </View>
         </View>
-      </View>
       </KeyboardAvoidingView>
+
+      {/* ── Bottom navigation — only shown when keyboard is hidden ── */}
       {!keyboardVisible && (
-        <View style={styles.nav}>
-          <TouchableOpacity
+        <View style={[styles.nav, { height: NAV_H, paddingBottom: insets.bottom || (Platform.OS === 'ios' ? 18 : 0) }]}>
+          <PressableScale
             style={styles.navItem}
             onPress={() => router.push('/dashboard')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Feather name="home" size={20} color={TEXT_MUTED} />
             <Text style={styles.navLabel}>HOME</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableScale>
+          <PressableScale
             style={styles.navItem}
             onPress={() => router.push('/schedule')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Feather name="calendar" size={20} color={TEXT_MUTED} />
             <Text style={styles.navLabel}>SCHEDULE</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableScale>
+          <PressableScale
             style={styles.navItem}
-            activeOpacity={0.85}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <MaterialCommunityIcons name="robot-outline" size={20} color={GOLD} />
             <Text style={[styles.navLabel, styles.navLabelActive]}>AI ASSISTANT</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableScale>
+          <PressableScale
             style={styles.navItem}
             onPress={() => router.push('/alerts')}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Feather name="bell" size={20} color={TEXT_MUTED} />
             <Text style={styles.navLabel}>ALERTS</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableScale>
+          <PressableScale
             style={styles.navItem}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
             <Feather name="user" size={20} color={TEXT_MUTED} />
             <Text style={styles.navLabel}>PROFILE</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       )}
     </SafeAreaView>
   );
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function formatTime(date) {
-  let h = date.getHours();
-  const m = date.getMinutes();
-  const ap = h >= 12 ? 'PM' : 'AM';
-  h = h % 12 || 12;
+  let h      = date.getHours();
+  const m    = date.getMinutes();
+  const ap   = h >= 12 ? 'PM' : 'AM';
+  h          = h % 12 || 12;
   return `${h}:${m.toString().padStart(2, '0')} ${ap}`;
 }
 
-const NAV_H = Platform.OS === 'ios' ? 84 : 66;
-
+// ── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
-  kav: { flex: 1, marginBottom: NAV_H },
-  header: {
-    paddingTop: 10,
-    paddingHorizontal: 16,
-    height: Platform.OS === 'ios' ? 108 : 76,
-    backgroundColor: '#0f0d09',
-    borderBottomWidth: 1,
-    borderBottomColor: '#201c15',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  // ── Root ──
+  safe: {
+    flex: 1,
+    backgroundColor: BG,
+    // ✅ FIX 1: Removed the hard-coded paddingTop that was adding a large blank
+    // gap above the header on both platforms. SafeAreaView with edges={['top']}
+    // already insets for the status bar / notch; no extra padding is needed.
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+
+  // KeyboardAvoidingView fills the remaining space below the header.
+  // ✅ FIX 2: No static marginBottom here — the composer is now INSIDE the KAV
+  // so it automatically moves with the keyboard. The nav sits outside and is
+  // conditionally rendered, so there is no clash.
+  kav: {
+    flex: 1,
+  },
+
+  // ── Header ──
+  header: {
+    // ✅ FIX 3: Replaced the over-sized fixed heights (108/76px) with a compact,
+    // symmetric value. paddingTop:10 gives breathing room without wasting screen.
+    height:              Platform.OS === 'ios' ? 56 : 52,
+    paddingTop:          Platform.OS === 'ios' ? 6 : 4,
+    paddingHorizontal:   16,
+    backgroundColor:     '#0f0d09',
+    borderBottomWidth:   1,
+    borderBottomColor:   '#201c15',
+    flexDirection:       'row',
+    alignItems:          'center',
+    justifyContent:      'space-between',
+  },
+  brandRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
   avatarWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: BORDER,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width:           28,
+    height:          28,
+    borderRadius:    14,
+    borderWidth:     1,
+    borderColor:     BORDER,
+    justifyContent:  'center',
+    alignItems:      'center',
     backgroundColor: '#1d1912',
   },
   brandTitle: { color: GOLD, fontFamily: FONTS.bold, fontSize: 23 },
-  onlineDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD },
-  bellBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  onlineDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD },
+  bellBtn:    { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
 
-  thread: { flex: 1 },
-  threadContent: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 20 },
+  // ── Message thread ──
+  thread:        { flex: 1 },
+  threadContent: {
+    paddingHorizontal: 14,
+    // ✅ FIX 4: paddingTop reduced from 16 → 10 so messages start closer to
+    // the header for a tighter, more immersive feel.
+    paddingTop:        10,
+    // paddingBottom is set dynamically above the composer height so the last
+    // message is never hidden behind the input bar.
+  },
+
   dayPill: {
-    alignSelf: 'center',
-    backgroundColor: '#2a251d',
-    borderRadius: 10,
+    alignSelf:        'center',
+    backgroundColor:  '#2a251d',
+    borderRadius:     10,
     paddingHorizontal: 12,
-    paddingVertical: 3,
-    marginBottom: 12,
+    paddingVertical:  3,
+    marginBottom:     10,
   },
   dayPillText: { color: TEXT_MUTED, fontFamily: FONTS.medium, fontSize: 11 },
-  messageWrap: { marginBottom: 12, maxWidth: '86%' },
+
+  messageWrap:   { marginBottom: 12, maxWidth: '80%' },
   assistantWrap: { alignSelf: 'flex-start' },
-  userWrap: { alignSelf: 'flex-end' },
-  bubble: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 },
-  assistantBubble: { backgroundColor: BUBBLE_ASSISTANT },
-  userBubble: { backgroundColor: BUBBLE_USER },
+  userWrap:      { alignSelf: 'flex-end' },
+
+  bubble:          { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 11 },
+  assistantBubble: {
+    backgroundColor: BUBBLE_ASSISTANT,
+    shadowColor:     '#000',
+    shadowOffset:    { width: 0, height: 2 },
+    shadowOpacity:   0.14,
+    shadowRadius:    4,
+    elevation:       1,
+  },
+  userBubble:  { backgroundColor: BUBBLE_USER },
   errorBubble: { borderWidth: 1, borderColor: 'rgba(239,83,80,0.4)' },
-  bubbleText: { fontFamily: FONTS.medium, fontSize: 15, lineHeight: 22 },
+
+  bubbleText:          { fontFamily: FONTS.medium, fontSize: 15, lineHeight: 24 },
   assistantBubbleText: { color: TEXT_PRIMARY },
-  userBubbleText: { color: TEXT_DARK },
-  timeLabel: { marginTop: 4, marginLeft: 4, fontFamily: FONTS.medium, fontSize: 10, color: TEXT_MUTED },
+  userBubbleText:      { color: TEXT_DARK },
+
+  timeLabel:     { marginTop: 4, marginLeft: 6, fontFamily: FONTS.medium, fontSize: 10, color: '#8f8570' },
   timeLabelUser: { textAlign: 'right', marginRight: 4, marginLeft: 0 },
 
+  // ── Inline card ──
   inlineCard: {
-    marginTop: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: BORDER,
+    marginTop:       12,
+    borderRadius:    12,
+    borderWidth:     1,
+    borderColor:     BORDER,
     backgroundColor: '#201b13',
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    padding:         10,
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             10,
   },
   inlineCardIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width:           34,
+    height:          34,
+    borderRadius:    8,
+    justifyContent:  'center',
+    alignItems:      'center',
     backgroundColor: 'rgba(245,208,96,0.14)',
   },
-  inlineCardTitle: { color: TEXT_PRIMARY, fontFamily: FONTS.bold, fontSize: 11, letterSpacing: 0.8 },
+  inlineCardTitle:    { color: TEXT_PRIMARY,   fontFamily: FONTS.bold,   fontSize: 11, letterSpacing: 0.8 },
   inlineCardSubtitle: { color: TEXT_SECONDARY, fontFamily: FONTS.medium, fontSize: 12, marginTop: 2 },
 
-  // Tool call badges
-  toolRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 10,
-  },
+  // ── Tool call badges ──
+  toolRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   toolBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(245,208,96,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(245,208,96,0.2)',
+    flexDirection:   'row',
+    alignItems:      'center',
+    gap:             5,
+    backgroundColor: 'rgba(245,208,96,0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius:    999,
+    borderWidth:     1,
+    borderColor:     'rgba(245,208,96,0.24)',
+    marginRight:     4,
   },
   toolBadgeText: {
-    fontFamily: FONTS.medium,
-    fontSize: 10,
-    color: GOLD,
-    textTransform: 'lowercase',
+    fontFamily:     FONTS.semibold,
+    fontSize:       11,
+    color:          GOLD,
+    textTransform:  'lowercase',
   },
 
-  // Typing indicator
+  // ── Typing indicator ──
   typingBubble: { paddingVertical: 16, paddingHorizontal: 20 },
-  typingRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  typingRow:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
   typingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: TEXT_MUTED,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: TEXT_MUTED,
   },
 
+  // ── Composer dock ──
+  // ✅ FIX 5: Composer is now a regular in-flow child of the KAV (not absolutely
+  // positioned). This is the key change that makes the keyboard push it up
+  // correctly on both platforms without any manual bottom-offset arithmetic.
   composerDock: {
     backgroundColor: '#15120d',
-    borderTopWidth: 1,
-    borderTopColor: '#201c15',
+    borderTopWidth:  1,
+    borderTopColor:  '#201c15',
   },
   composerRow: {
     paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 8,
-    backgroundColor: '#15120d',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    // ✅ FIX 6: Symmetric vertical padding — same top and bottom — keeps the
+    // input bar vertically centred and prevents it feeling bottom-heavy.
+    paddingTop:        10,
+    paddingBottom:     10,
+    backgroundColor:   '#15120d',
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               8,
   },
-  plusBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+
+  plusBtn: {
+    width:         34,
+    height:        34,
+    justifyContent: 'center',
+    alignItems:    'center',
+    borderRadius:  17,
+  },
   inputWrap: {
-    flex: 1,
+    flex:          1,
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#3b3428',
+    alignItems:    'center',
+    borderWidth:   1,
+    borderColor:   '#3b3428',
     backgroundColor: '#1a1610',
-    borderRadius: 18,
-    height: 40,
-    paddingLeft: 12,
-    paddingRight: 4,
+    borderRadius:  20,
+    minHeight:     42,
+    paddingLeft:   12,
+    paddingRight:  4,
+    shadowColor:   GOLD,
   },
-  input: { flex: 1, color: TEXT_PRIMARY, fontFamily: FONTS.medium, fontSize: 14 },
-  micBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  inputWrapFocused: { borderColor: 'rgba(245,208,96,0.55)' },
+  input: {
+    flex:          1,
+    color:         TEXT_PRIMARY,
+    fontFamily:    FONTS.medium,
+    fontSize:      14,
+    paddingVertical: 9,
+  },
+  micBtn: {
+    width:         34,
+    height:        34,
+    justifyContent: 'center',
+    alignItems:    'center',
+    borderRadius:  17,
+  },
   micBtnRecording: {
-    opacity: 0.95,
-    borderRadius: 8,
+    opacity:         0.95,
+    borderRadius:    8,
     backgroundColor: 'rgba(239,83,80,0.2)',
   },
-  sendBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: GOLD,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendBtnDisabled: { opacity: 0.35 },
 
+  // ── Bottom navigation ──
   nav: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: NAV_H,
+    // ✅ FIX 7: Not absolutely positioned anymore — it's naturally at the bottom
+    // of the SafeAreaView stack. When the keyboard is open this whole View is
+    // conditionally removed, so there is zero interference.
     backgroundColor: NAV_BG,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#1e1b14',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingBottom: Platform.OS === 'ios' ? 18 : 0,
+    borderTopWidth:  StyleSheet.hairlineWidth,
+    borderTopColor:  '#1e1b14',
+    flexDirection:   'row',
+    justifyContent:  'space-around',
+    alignItems:      'center',
   },
-  navItem: { alignItems: 'center', gap: 2, minWidth: 48 },
+  navItem: {
+    alignItems:    'center',
+    gap:           2,
+    minWidth:      48,
+    paddingVertical: 6,
+  },
   navLabel: {
-    fontFamily: FONTS.medium,
-    fontSize: 9,
-    color: TEXT_MUTED,
+    fontFamily:    FONTS.medium,
+    fontSize:      9,
+    color:         TEXT_MUTED,
     letterSpacing: 0.55,
     textTransform: 'uppercase',
   },
