@@ -16,6 +16,7 @@ import issueRoutes from './routes/issue.js';
 import materialRoutes from './routes/material.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import aiRoutes from './routes/ai.js';
 
 dotenv.config({});
 
@@ -54,6 +55,7 @@ app.use('/notifications', notificationRoutes);
 app.use('/issues', issueRoutes);
 app.use('/materials', materialRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/ai', aiRoutes);
 
 const server = http.createServer(app);
 

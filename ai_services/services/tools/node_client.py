@@ -78,23 +78,28 @@ async def create_schedule(token: str, data: dict) -> dict:
 # ── requestController.js ─────────────────────────────────────────────────────
 
 async def get_my_requests(token: str) -> dict:
-    """GET /requests — student sees own, faculty sees pending approvals"""
-    return await _get("/requests", token)
+    """GET /request — student sees own, faculty sees pending approvals"""
+    return await _get("/request", token)
 
 
 async def get_pending_requests(token: str) -> dict:
-    """GET /request/pending"""
+    """GET /request/pending — user's own pending requests"""
     return await _get("/request/pending", token)
 
 
+async def get_requests_for_approver(token: str) -> dict:
+    """GET /request — faculty/HOD sees requests where they are the approver"""
+    return await _get("/request", token)
+
+
 async def create_request(token: str, data: dict) -> dict:
-    """POST /requests"""
-    return await _post("/requests", token, data)
+    """POST /request"""
+    return await _post("/request", token, data)
 
 
 async def action_request(token: str, request_id: str, action: str, remarks: str = "") -> dict:
-    """POST /requests/action — approve or reject"""
-    return await _post("/requests/action", token, {
+    """POST /request/action — approve or reject"""
+    return await _post("/request/action", token, {
         "requestId": request_id,
         "action":    action,
         "remarks":   remarks,
@@ -142,5 +147,5 @@ async def create_announcement(token: str, title: str, body: str, audience: str =
 # ── professorController.js ───────────────────────────────────────────────────
 
 async def setup_professor_profile(token: str, data: dict) -> dict:
-    """POST /professor/profile"""
-    return await _post("/professor/profile", token, data)
+    """POST /prof/setup"""
+    return await _post("/prof/setup", token, data)

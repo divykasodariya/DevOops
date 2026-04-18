@@ -1,10 +1,13 @@
 import json
+import jwt
+from config import settings
 from services.llm.llm_client import call_llm
 from services.tools.mailer import send_email
 from services.tools.node_client import (
     get_attendance_overview, get_faculty_stats, mark_attendance,
     get_my_schedule, get_free_slots, create_schedule,
-    get_my_requests, get_pending_requests, create_request, action_request,
+    get_my_requests, get_pending_requests, get_requests_for_approver,
+    create_request, action_request,
     create_issue, get_my_issues,
     get_my_notifications, get_announcements, create_announcement,
 )
@@ -62,7 +65,7 @@ TOOLS = {
         "params": [],
     },
     "submit_request": {
-        "description": "Submit a new approval request — leave, OD, certificate, room, LOR",
+        "description": "Submit a new approval request. REQUIRED: type and title. Optional: description. type must be one of: leave, room, event, certificate, lor, research, od, lab_access, event_permission, custom.",
         "params": ["type", "title", "description"],
     },
     "approve_request": {
@@ -72,8 +75,8 @@ TOOLS = {
 
     # ── Issues ───────────────────────────────────────────────
     "report_issue": {
-        "description": "Report a campus infrastructure issue — electrical, plumbing, IT, safety",
-        "params": ["title", "category", "location", "description"],
+        "description": "Report a campus infrastructure issue. REQUIRED: title, category (it, facility, electrical, plumbing, safety, other), and location. Optional: priority (low, medium, high, critical) and description.",
+        "params": ["title", "category", "location", "description", "priority"],
     },
     "check_my_issues": {
         "description": "Check status of issues I have reported",
@@ -90,7 +93,7 @@ TOOLS = {
         "params": [],
     },
     "send_announcement": {
-        "description": "Send an announcement to students or faculty (admin/faculty only)",
+        "description": "Send an announcement to students or faculty. REQUIRED: title and body. Optional: audience (student, faculty, all).",
         "params": ["title", "body", "audience"],
     },
 
@@ -156,6 +159,14 @@ async def run_agent(
 
     if history is None:
         history = []
+
+    # If no token provided, generate a fresh one using the shared secret
+    if not token or token.strip() == "":
+        try:
+            token = jwt.encode({"id": user_id}, settings.JWT_SECRET, algorithm="HS256")
+            logger.info(f"Generated fresh JWT for user {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to generate JWT: {e}")
 
     # 1. Build tool descriptions
     tool_descriptions = "\n".join(
@@ -271,9 +282,11 @@ async def run_agent(
                     results["requests"] = data or "No pending requests."
 
             elif tool_name == "check_pending_approvals":
-                results["pending_approvals"] = await get_pending_requests(token)
+                results["pending_approvals"] = await get_requests_for_approver(token)
 
             elif tool_name == "submit_request":
+                if "title" not in params or not params["title"]:
+                    params["title"] = f"{params.get('type', 'Request').title()} Request"
                 results["submit_request"] = await create_request(token, params)
 
             elif tool_name == "approve_request":
@@ -306,8 +319,8 @@ async def run_agent(
             elif tool_name == "send_announcement":
                 results["announcement"] = await create_announcement(
                     token,
-                    title=params.get("title", ""),
-                    body=params.get("body", ""),
+                    title=params.get("title") or "Important Announcement",
+                    body=params.get("body") or "Please check the portal for details.",
                     audience=params.get("audience", "all"),
                 )
 
