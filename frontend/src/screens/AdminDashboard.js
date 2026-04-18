@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -175,24 +176,51 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.topRow}>
           <View>
             <Text style={styles.greeting}>Good morning, {firstName}</Text>
             <Text style={styles.title}>Admin Overview</Text>
             <Text style={styles.subtitle}>Campus operations and metrics at a glance.</Text>
           </View>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/notifications')}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => router.push('/notifications')}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="bell" size={18} color={COLORS.gold} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.ghostAction} onPress={() => router.push('/approvals')}>
+          <TouchableOpacity
+            style={styles.ghostAction}
+            onPress={() => router.push('/approvals')}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="check-square" size={15} color={COLORS.white} />
             <Text style={styles.ghostActionText}>Export Report</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.primaryAction} onPress={() => router.push('/publish-notice')}>
+          <TouchableOpacity
+            style={styles.primaryAction}
+            onPress={() => router.push('/publish-notice')}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="plus" size={15} color={COLORS.background} />
             <Text style={styles.primaryActionText}>New Alert</Text>
           </TouchableOpacity>
@@ -224,7 +252,12 @@ export default function AdminDashboard() {
           style={styles.metricCard}
           onPress={() => router.push('/approvals')}
           activeOpacity={0.85}
-        >
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <View style={styles.metricTextWrap}>
             <Text style={styles.metricLabel}>PENDING APPROVALS</Text>
             <Text style={styles.metricValue}>{pendingCount || 342}</Text>
@@ -272,7 +305,12 @@ export default function AdminDashboard() {
             style={[styles.imposeButton, isSubmittingFine && styles.imposeButtonDisabled]}
             onPress={handleFineSubmit}
             disabled={isSubmittingFine}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="alert-circle" size={14} color="#FFF4F4" />
             <Text style={styles.imposeButtonText}>
               {isSubmittingFine ? 'Imposing...' : 'Impose Fine'}
@@ -304,7 +342,15 @@ export default function AdminDashboard() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={logout}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="log-out" size={14} color={COLORS.gold} />
           <Text style={styles.logoutText}>Sign out</Text>
         </TouchableOpacity>
@@ -317,10 +363,11 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingTop: 10,
-  },
+    
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   scroll: {
     paddingHorizontal: 14,
+    paddingTop: 10,
     paddingBottom: 120,
   },
   topRow: {

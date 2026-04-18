@@ -73,7 +73,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -101,7 +101,13 @@ export default function LoginScreen() {
 
               <View style={styles.passwordHeader}>
                 <Text style={styles.label}>PASSWORD</Text>
-                <TouchableOpacity>
+                <TouchableOpacity
+                  hitSlop={{
+                    top: 10,
+                    bottom: 10,
+                    left: 10,
+                    right: 10
+                  }}>
                   <Text style={styles.forgotText}>Forgot?</Text>
                 </TouchableOpacity>
               </View>
@@ -133,14 +139,19 @@ export default function LoginScreen() {
                 style={styles.ssoButton}
                 activeOpacity={0.8}
                 onPress={() => router.push({ pathname: '/register', params: { role } })}
-              >
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
                 <Text style={styles.ssoButtonText}>Sign Up</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -148,7 +159,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   flex: {
     flex: 1,
   },

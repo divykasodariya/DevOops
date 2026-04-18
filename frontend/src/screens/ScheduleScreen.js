@@ -1,8 +1,8 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -135,15 +135,25 @@ export default function ScheduleScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <View style={styles.appHeader}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Ionicons name="arrow-back" size={20} color={theme.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Schedule</Text>
       </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.headerTextRow}>
           <View>
             <Text style={styles.pageTitle}>
@@ -151,7 +161,15 @@ export default function ScheduleScreen() {
             </Text>
             <Text style={styles.pageSubtitle}>Calendar & Events</Text>
           </View>
-          <TouchableOpacity style={styles.todayBtn} onPress={() => setSelectedDate(new Date())}>
+          <TouchableOpacity
+            style={styles.todayBtn}
+            onPress={() => setSelectedDate(new Date())}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Ionicons name="calendar-clear-outline" size={14} color={theme.primary} />
             <Text style={styles.todayBtnText}>Today</Text>
           </TouchableOpacity>
@@ -161,7 +179,12 @@ export default function ScheduleScreen() {
           activeOpacity={0.88}
           onPress={() => router.push('/book-space')}
           style={styles.bookSpaceShadow}
-        >
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <LinearGradient
             colors={['#e7c355', '#c59d2b']}
             start={{ x: 0, y: 0 }}
@@ -176,7 +199,16 @@ export default function ScheduleScreen() {
 
         <View style={styles.weeklyStrip}>
           {getWeeklyStrip().map((item, index) => (
-            <TouchableOpacity key={index} style={styles.weekDayCol} onPress={() => setSelectedDate(item.fullDate)}>
+            <TouchableOpacity
+              key={index}
+              style={styles.weekDayCol}
+              onPress={() => setSelectedDate(item.fullDate)}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
               <Text style={styles.weekDayText}>{item.day}</Text>
               <View style={[styles.dateCircle, item.active && styles.dateCircleActive]}>
                 <Text style={[styles.weekDateText, item.active && styles.weekDateTextActive]}>{item.date}</Text>
@@ -230,10 +262,26 @@ export default function ScheduleScreen() {
           <View style={styles.monthHeaderRow}>
             <Text style={styles.monthTitle}>{monthNames[selectedDate.getMonth()]}</Text>
             <View style={styles.monthArrows}>
-              <TouchableOpacity onPress={handlePrevMonth} style={{ padding: 4 }}>
+              <TouchableOpacity
+                onPress={handlePrevMonth}
+                style={{ padding: 4 }}
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
                 <Ionicons name="chevron-back" size={18} color={theme.textMuted} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleNextMonth} style={{ padding: 4, marginLeft: 8 }}>
+              <TouchableOpacity
+                onPress={handleNextMonth}
+                style={{ padding: 4, marginLeft: 8 }}
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
                 <Ionicons name="chevron-forward" size={18} color={theme.textMuted} />
               </TouchableOpacity>
             </View>
@@ -260,7 +308,16 @@ export default function ScheduleScreen() {
                 );
               }
               return (
-                <TouchableOpacity key={index} style={styles.calDateCell} onPress={() => setSelectedDate(item.fullDate)}>
+                <TouchableOpacity
+                  key={index}
+                  style={styles.calDateCell}
+                  onPress={() => setSelectedDate(item.fullDate)}
+                  hitSlop={{
+                    top: 10,
+                    bottom: 10,
+                    left: 10,
+                    right: 10
+                  }}>
                   <Text style={styles.calDate}>{item.date}</Text>
                   {item.hasEvent && <View style={styles.dotIndicatorSmall} />}
                 </TouchableOpacity>
@@ -269,7 +326,7 @@ export default function ScheduleScreen() {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -277,8 +334,8 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.bg,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
+    
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   appHeader: {
     flexDirection: 'row',
     alignItems: 'center',

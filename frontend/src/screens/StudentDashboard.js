@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -204,13 +205,24 @@ export default function StudentDashboard() {
 
   return (
     <View style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         <View style={styles.topBar}>
           <View style={styles.topBarL}>
             <InitialAvatar name={user?.name} size={40} />
             <Text style={styles.greeting}>{greeting}, {firstName}</Text>
           </View>
-          <TouchableOpacity style={styles.bellBtn} activeOpacity={0.75}>
+          <TouchableOpacity
+            style={styles.bellBtn}
+            activeOpacity={0.75}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="bell" size={20} color={GOLD} />
             {unreadCount > 0 && (
               <View style={styles.bellBadge}>
@@ -235,7 +247,15 @@ export default function StudentDashboard() {
             <Feather name="map-pin" size={14} color={TEXT_SECONDARY} />
             <Text style={styles.heroMetaText}>{nextClass?.room || nextClass?.location || 'Room TBA'}</Text>
           </View>
-          <TouchableOpacity style={styles.heroBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={styles.heroBtn}
+            activeOpacity={0.8}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Text style={styles.heroBtnText}>View Schedule</Text>
           </TouchableOpacity>
         </View>
@@ -245,7 +265,12 @@ export default function StudentDashboard() {
             style={[styles.quickBtn, styles.quickBtnPrimary]}
             onPress={() => router.push('/make-request?kind=request')}
             activeOpacity={0.82}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="file-plus" size={16} color={BG} />
             <Text style={styles.quickBtnPrimaryText}>Make a Request</Text>
           </TouchableOpacity>
@@ -253,7 +278,12 @@ export default function StudentDashboard() {
             style={[styles.quickBtn, styles.quickBtnSecondary]}
             onPress={() => router.push('/report-issue')}
             activeOpacity={0.82}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="alert-octagon" size={16} color={GOLD} />
             <Text style={styles.quickBtnSecondaryText}>Report Issue</Text>
           </TouchableOpacity>
@@ -325,7 +355,12 @@ export default function StudentDashboard() {
                             onPress={() => openAttachment(attachment.url)}
                             style={styles.attachmentBtn}
                             activeOpacity={0.8}
-                          >
+                            hitSlop={{
+                              top: 10,
+                              bottom: 10,
+                              left: 10,
+                              right: 10
+                            }}>
                             <Feather name="download" size={13} color={GOLD} />
                             <Text style={styles.attachmentBtnText} numberOfLines={1}>
                               {attachment.fileName || 'Download file'}
@@ -337,13 +372,12 @@ export default function StudentDashboard() {
                   </View>
                 );
               }}
-            />
+              keyboardShouldPersistTaps="handled" />
           )}
         </View>
 
         <View style={{ height: 150 }} />
       </ScrollView>
-
       <View style={styles.askWrap}>
         <View style={styles.askBox}>
           <TextInput
@@ -360,18 +394,40 @@ export default function StudentDashboard() {
               setAskText('');
             }}
           />
-          <TouchableOpacity style={styles.micBtn} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.micBtn}
+            activeOpacity={0.7}
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <Feather name="mic" size={20} color={GOLD} />
           </TouchableOpacity>
         </View>
       </View>
-
       <View style={styles.nav}>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="home" size={22} color={GOLD} />
           <Text style={[styles.navLbl, { color: GOLD }]}>HOME</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/schedule')}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push('/schedule')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="calendar" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>SCHEDULE</Text>
         </TouchableOpacity>
@@ -380,15 +436,35 @@ export default function StudentDashboard() {
             style={styles.fab}
             activeOpacity={0.8}
             onPress={() => router.push('/ai-assistant')}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <MaterialCommunityIcons name="robot-outline" size={24} color={BG} />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/alerts')}>
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push('/alerts')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="bell" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>ALERTS</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        <TouchableOpacity
+          style={styles.navItem}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="user" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>PROFILE</Text>
         </TouchableOpacity>
@@ -401,9 +477,9 @@ const NAV_H = Platform.OS === 'ios' ? 84 : 64;
 const ASK_BOTTOM = NAV_H + 8;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 16 },
+  scroll: { paddingHorizontal: 20, paddingTop: 10,},
 
   topBar: {
     flexDirection: 'row',
@@ -485,7 +561,7 @@ const styles = StyleSheet.create({
   quickBtnPrimaryText: { fontFamily: FONTS.semibold, color: BG, fontSize: 13 },
   quickBtnSecondaryText: { fontFamily: FONTS.semibold, color: GOLD, fontSize: 13 },
 
-  grid: { flexDirection: 'row', gap: 14, marginBottom: 22 },
+  grid: { flexDirection: 'row', gap: 14, marginBottom: 22, marginTop: 4 },
   gridCard: { flex: 1, backgroundColor: CARD_BG, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: CARD_BORDER },
   attCard: { alignItems: 'center', justifyContent: 'center' },
   gridHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
@@ -508,7 +584,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     transform: [{ rotate: '-45deg' }],
   },
-  ringPct: { fontFamily: FONTS.semibold, fontSize: 36, color: TEXT_PRIMARY },
+  ringPct: { fontFamily: FONTS.semibold, fontSize: 24, color: TEXT_PRIMARY },
   attStatus: { fontFamily: FONTS.medium, fontSize: 13, color: '#81d1f2', letterSpacing: 0.4, textAlign: 'center' },
 
   annSection: { marginBottom: 18 },

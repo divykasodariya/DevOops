@@ -124,7 +124,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -229,18 +229,23 @@ export default function RegisterScreen() {
                 style={styles.loginButton}
               />
 
-              <TouchableOpacity 
-                style={styles.ssoButton} 
+              <TouchableOpacity
+                style={styles.ssoButton}
                 activeOpacity={0.8}
                 onPress={() => router.back()}
-              >
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
                 <Text style={styles.ssoButtonText}>Back to Login</Text>
               </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -248,7 +253,7 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.background,
-  },
+  , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   flex: {
     flex: 1,
   },

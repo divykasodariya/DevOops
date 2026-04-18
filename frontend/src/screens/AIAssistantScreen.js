@@ -1,7 +1,8 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
   Animated,
-  Keyboard,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -42,8 +44,23 @@ export default function AIAssistantScreen() {
   const [messages, setMessages] = useState([]);
   const [llmHistory, setLlmHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidHideListener.remove();
+      keyboardDidShowListener.remove();
+    };
+  }, []);
 
   // Dot animation for typing indicator
   const dot1 = useRef(new Animated.Value(0)).current;
@@ -135,28 +152,6 @@ export default function AIAssistantScreen() {
     setInput('');
   }, [initialInput, messages.length]);
 
-  // Keyboard listeners
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const onShow = (event) => {
-      setKeyboardVisible(true);
-      setKeyboardHeight(event?.endCoordinates?.height || 0);
-    };
-    const onHide = () => {
-      setKeyboardVisible(false);
-      setKeyboardHeight(0);
-    };
-
-    const showSub = Keyboard.addListener(showEvent, onShow);
-    const hideSub = Keyboard.addListener(hideEvent, onHide);
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
   const canSend = useMemo(() => input.trim().length > 0 && !isLoading, [input, isLoading]);
 
   const scrollToEnd = useCallback(() => {
@@ -247,7 +242,7 @@ export default function AIAssistantScreen() {
   };
 
   return (
-    <View style={styles.safe}>
+    <View style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <View style={styles.brandRow}>
           <View style={styles.avatarWrap}>
@@ -256,19 +251,32 @@ export default function AIAssistantScreen() {
           <Text style={styles.brandTitle}>Aether AI</Text>
           <View style={styles.onlineDot} />
         </View>
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.75} onPress={handleClearChat}>
+        <TouchableOpacity
+          style={styles.bellBtn}
+          activeOpacity={0.75}
+          onPress={handleClearChat}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="trash-2" size={18} color={GOLD} />
         </TouchableOpacity>
       </View>
-
-      <ScrollView
-        ref={scrollRef}
-        style={styles.thread}
-        contentContainerStyle={styles.threadContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onContentSizeChange={() => scrollToEnd()}
-      >
+      <KeyboardAvoidingView
+        style={[styles.kav, { marginBottom: isKeyboardVisible ? 0 : NAV_H }]}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'android' ? 64 : 88}>
+        <ScrollView
+          ref={scrollRef}
+          style={styles.thread}
+          contentContainerStyle={styles.threadContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          onContentSizeChange={() => scrollToEnd()}
+        >
         <View style={styles.dayPill}>
           <Text style={styles.dayPillText}>Today</Text>
         </View>
@@ -328,70 +336,101 @@ export default function AIAssistantScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
-
-      <View
-        style={[
-          styles.composerDock,
-          { bottom: keyboardVisible ? keyboardHeight : NAV_H },
-        ]}
-      >
-        <View style={styles.composerRow}>
-          <TouchableOpacity style={styles.plusBtn} activeOpacity={0.75}>
-            <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
-          </TouchableOpacity>
-          <View style={styles.inputWrap}>
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              placeholder="Ask Aether"
-              placeholderTextColor={TEXT_MUTED}
-              style={styles.input}
-              returnKeyType="send"
-              onSubmitEditing={handleSend}
-              editable={!isLoading}
-            />
-            <TouchableOpacity style={styles.micBtn} activeOpacity={0.75}>
-              <Feather name="mic" size={18} color={GOLD} />
+        </ScrollView>
+        <View style={styles.composerDock}>
+          <View style={styles.composerRow}>
+            <TouchableOpacity
+              style={styles.plusBtn}
+              activeOpacity={0.75}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
+              <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
+            </TouchableOpacity>
+            <View style={styles.inputWrap}>
+              <TextInput
+                value={input}
+                onChangeText={setInput}
+                placeholder="Ask Aether"
+                placeholderTextColor={TEXT_MUTED}
+                style={styles.input}
+                returnKeyType="send"
+                onSubmitEditing={handleSend}
+                editable={!isLoading}
+              />
+              <TouchableOpacity
+                style={styles.micBtn}
+                activeOpacity={0.75}
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
+                <Feather name="mic" size={18} color={GOLD} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity
+              style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              disabled={!canSend}
+              activeOpacity={0.85}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={BG} />
+              ) : (
+                <Feather name="arrow-up" size={18} color={BG} />
+              )}
             </TouchableOpacity>
           </View>
+        </View>
+      </KeyboardAvoidingView>
+      {!isKeyboardVisible && (
+        <View style={styles.nav}>
           <TouchableOpacity
-            style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!canSend}
+            style={styles.navItem}
+            onPress={() => router.push('/dashboard')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="home" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>HOME</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/schedule')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="calendar" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>SCHEDULE</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
             activeOpacity={0.85}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={BG} />
-            ) : (
-              <Feather name="arrow-up" size={18} color={BG} />
-            )}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <MaterialCommunityIcons name="robot-outline" size={20} color={GOLD} />
+            <Text style={[styles.navLabel, styles.navLabelActive]}>AI ASSISTANT</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => router.push('/alerts')}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="bell" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>ALERTS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navItem}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="user" size={20} color={TEXT_MUTED} />
+            <Text style={styles.navLabel}>PROFILE</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.nav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/dashboard')}>
-          <Feather name="home" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>HOME</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/schedule')}>
-          <Feather name="calendar" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>SCHEDULE</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.85}>
-          <MaterialCommunityIcons name="robot-outline" size={20} color={GOLD} />
-          <Text style={[styles.navLabel, styles.navLabelActive]}>AI ASSISTANT</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push('/alerts')}>
-          <Feather name="bell" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>ALERTS</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Feather name="user" size={20} color={TEXT_MUTED} />
-          <Text style={styles.navLabel}>PROFILE</Text>
-        </TouchableOpacity>
-      </View>
+      )}
     </View>
   );
 }
@@ -407,9 +446,10 @@ function formatTime(date) {
 const NAV_H = Platform.OS === 'ios' ? 84 : 66;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+  kav: { flex: 1, marginBottom: NAV_H },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 56 : 22,
+    paddingTop: 10,
     paddingHorizontal: 16,
     height: Platform.OS === 'ios' ? 108 : 76,
     backgroundColor: '#0f0d09',
@@ -435,7 +475,7 @@ const styles = StyleSheet.create({
   bellBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
 
   thread: { flex: 1 },
-  threadContent: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 130 },
+  threadContent: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 20 },
   dayPill: {
     alignSelf: 'center',
     backgroundColor: '#2a251d',
@@ -516,18 +556,15 @@ const styles = StyleSheet.create({
   },
 
   composerDock: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 8,
+    backgroundColor: '#15120d',
+    borderTopWidth: 1,
+    borderTopColor: '#201c15',
   },
   composerRow: {
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 8,
     backgroundColor: '#15120d',
-    borderTopWidth: 1,
-    borderTopColor: '#201c15',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

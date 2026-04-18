@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -145,7 +146,7 @@ export default function FacultyDashboard() {
       <ScrollView
         contentContainerStyle={st.scroll}
         showsVerticalScrollIndicator={false}
-      >
+        keyboardShouldPersistTaps="handled">
         {/* ── HEADER ── */}
         <View style={st.header}>
           <View style={st.headerL}>
@@ -153,7 +154,15 @@ export default function FacultyDashboard() {
             <Text style={st.greet}>{greeting}, {firstName}</Text>
           </View>
           <View style={st.headerR}>
-            <TouchableOpacity style={st.bellBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={st.bellBtn}
+              activeOpacity={0.7}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
               <Feather name="bell" size={20} color={GOLD} />
             </TouchableOpacity>
           </View>
@@ -205,7 +214,12 @@ export default function FacultyDashboard() {
           activeOpacity={0.82}
           style={[st.card, st.appCard]}
           onPress={() => router.push('/approvals')}
-        >
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <View style={st.appRow}>
             <View style={st.appLeft}>
               <View style={st.appIconBox}>
@@ -230,7 +244,12 @@ export default function FacultyDashboard() {
           activeOpacity={0.85}
           onPress={() => router.push('/publish-notice')}
           style={st.noticeShadow}
-        >
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <LinearGradient
             colors={[GOLD_D, '#c59d2b']}
             start={{ x: 0, y: 0 }}
@@ -256,7 +275,12 @@ export default function FacultyDashboard() {
                 style={st.qaCard}
                 activeOpacity={0.78}
                 onPress={() => router.push(item.route)}
-              >
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
                 <View style={[st.qaIcon, { backgroundColor: item.bg }]}>
                   <Feather name={item.icon} size={20} color={item.color} />
                 </View>
@@ -328,17 +352,32 @@ export default function FacultyDashboard() {
 
         <View style={{ height: 110 }} />
       </ScrollView>
-
       {/* ── BOTTOM NAV ── */}
       <View style={st.nav}>
         {/* Home */}
-        <TouchableOpacity style={st.navI} onPress={() => {}}>
+        <TouchableOpacity
+          style={st.navI}
+          onPress={() => {}}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="home" size={22} color={GOLD} />
           <Text style={[st.navL, { color: GOLD }]}>HOME</Text>
         </TouchableOpacity>
 
         {/* Schedule */}
-        <TouchableOpacity style={st.navI} onPress={() => router.push('/schedule')}>
+        <TouchableOpacity
+          style={st.navI}
+          onPress={() => router.push('/schedule')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="calendar" size={22} color={T3} />
           <Text style={st.navL}>SCHEDULE</Text>
         </TouchableOpacity>
@@ -349,7 +388,12 @@ export default function FacultyDashboard() {
             style={st.fab}
             activeOpacity={0.8}
             onPress={() => router.push('/ai-assistant')}
-          >
+            hitSlop={{
+              top: 10,
+              bottom: 10,
+              left: 10,
+              right: 10
+            }}>
             <MaterialCommunityIcons name="robot-outline" size={24} color={BG} />
           </TouchableOpacity>
           {/* Label below the FAB */}
@@ -357,13 +401,29 @@ export default function FacultyDashboard() {
         </View>
 
         {/* Alerts */}
-        <TouchableOpacity style={st.navI} onPress={() => router.push('/alerts')}>
+        <TouchableOpacity
+          style={st.navI}
+          onPress={() => router.push('/alerts')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="bell" size={22} color={T3} />
           <Text style={st.navL}>ALERTS</Text>
         </TouchableOpacity>
 
         {/* Profile */}
-        <TouchableOpacity style={st.navI} onPress={() => router.push('/profile')}>
+        <TouchableOpacity
+          style={st.navI}
+          onPress={() => router.push('/profile')}
+          hitSlop={{
+            top: 10,
+            bottom: 10,
+            left: 10,
+            right: 10
+          }}>
           <Feather name="user" size={22} color={T3} />
           <Text style={st.navL}>PROFILE</Text>
         </TouchableOpacity>
@@ -376,11 +436,11 @@ export default function FacultyDashboard() {
 const NAV_H = Platform.OS === 'ios' ? 84 : 64;
 
 const st = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: BG },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
   loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   scroll: {
     paddingHorizontal: 18,
-    paddingTop: Platform.OS === 'ios' ? 58 : 18,
+    paddingTop: 10,
   },
 
   // ── Header ──

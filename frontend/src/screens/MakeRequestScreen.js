@@ -1,3 +1,4 @@
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
@@ -182,141 +183,190 @@ export default function MakeRequestScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Feather name="arrow-left" size={20} color={GOLD} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{config.pageTitle}</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.subtitle}>{config.pageSubtitle}</Text>
-
-          {kind !== 'issue' && (
-            <>
-              <Text style={styles.label}>REQUEST TYPE</Text>
-              <View style={styles.typeRow}>
-                {['leave', 'certificate', 'lor', 'research', 'room', 'event_permission'].map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.typeChip, requestType === type && styles.typeChipActive]}
-                    onPress={() => setRequestType(type)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.typeChipText, requestType === type && styles.typeChipTextActive]}>
-                      {type.replace('_', ' ').toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          )}
-
-          <Text style={styles.label}>TITLE</Text>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder={config.titlePlaceholder}
-            placeholderTextColor="#8f846f"
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>DESCRIPTION</Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            placeholder={config.descriptionPlaceholder}
-            placeholderTextColor="#8f846f"
-            style={[styles.input, styles.textarea]}
-            multiline
-            textAlignVertical="top"
-          />
-
-          <View style={styles.stepHeaderRow}>
-            <Text style={styles.label}>APPROVAL STEPS</Text>
-            <TouchableOpacity onPress={addStep}>
-              <Text style={styles.addStepText}>+ Add Step</Text>
+    <View style={styles.safe}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 2 : 0}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => router.back()}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
+              <Feather name="arrow-left" size={20} color={GOLD} />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>{config.pageTitle}</Text>
           </View>
 
-          {loadingApprovers ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={GOLD} />
-              <Text style={styles.loadingText}>Loading approvers...</Text>
-            </View>
-          ) : (
-            steps.map((step, index) => (
-              <View key={`${index}-${step.approver}`} style={styles.stepCard}>
-                <View style={styles.stepTop}>
-                  <Text style={styles.stepTitle}>Step {index + 1}</Text>
-                  {steps.length > 1 && (
-                    <TouchableOpacity onPress={() => removeStep(index)}>
-                      <Feather name="x-circle" size={18} color="#d78686" />
+          <View style={styles.card}>
+            <Text style={styles.subtitle}>{config.pageSubtitle}</Text>
+
+            {kind !== 'issue' && (
+              <>
+                <Text style={styles.label}>REQUEST TYPE</Text>
+                <View style={styles.typeRow}>
+                  {['leave', 'certificate', 'lor', 'research', 'room', 'event_permission'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[styles.typeChip, requestType === type && styles.typeChipActive]}
+                      onPress={() => setRequestType(type)}
+                      activeOpacity={0.8}
+                      hitSlop={{
+                        top: 10,
+                        bottom: 10,
+                        left: 10,
+                        right: 10
+                      }}>
+                      <Text style={[styles.typeChipText, requestType === type && styles.typeChipTextActive]}>
+                        {type.replace('_', ' ').toUpperCase()}
+                      </Text>
                     </TouchableOpacity>
-                  )}
+                  ))}
                 </View>
+              </>
+            )}
 
-                <Text style={styles.stepLabel}>Approver</Text>
-                <View style={styles.approverList}>
-                  {approvers.slice(0, 20).map((ap) => {
-                    const selected = step.approver === ap._id;
-                    return (
-                      <TouchableOpacity
-                        key={ap._id}
-                        style={[styles.approverChip, selected && styles.approverChipActive]}
-                        onPress={() =>
-                          updateStep(index, { approver: ap._id, role: ap.role, email: (ap.email || '').toLowerCase() })
-                        }
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.approverChipText, selected && styles.approverChipTextActive]}>
-                          {ap.name} ({ap.role})
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+            <Text style={styles.label}>TITLE</Text>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder={config.titlePlaceholder}
+              placeholderTextColor="#8f846f"
+              style={styles.input}
+            />
 
-                <TextInput
-                  value={step.email}
-                  onChangeText={(text) => updateStep(index, { email: text })}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  placeholder="Or enter approver email (e.g. hod@college.edu)"
-                  placeholderTextColor="#8f846f"
-                  style={styles.input}
-                />
+            <Text style={styles.label}>DESCRIPTION</Text>
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder={config.descriptionPlaceholder}
+              placeholderTextColor="#8f846f"
+              style={[styles.input, styles.textarea]}
+              multiline
+              textAlignVertical="top"
+            />
 
-                <TextInput
-                  value={step.remarks}
-                  onChangeText={(text) => updateStep(index, { remarks: text })}
-                  placeholder="Optional remarks for this step"
-                  placeholderTextColor="#8f846f"
-                  style={styles.input}
-                />
+            <View style={styles.stepHeaderRow}>
+              <Text style={styles.label}>APPROVAL STEPS</Text>
+              <TouchableOpacity
+                onPress={addStep}
+                hitSlop={{
+                  top: 10,
+                  bottom: 10,
+                  left: 10,
+                  right: 10
+                }}>
+                <Text style={styles.addStepText}>+ Add Step</Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingApprovers ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={GOLD} />
+                <Text style={styles.loadingText}>Loading approvers...</Text>
               </View>
-            ))
-          )}
+            ) : (
+              steps.map((step, index) => (
+                <View key={`${index}-${step.approver}`} style={styles.stepCard}>
+                  <View style={styles.stepTop}>
+                    <Text style={styles.stepTitle}>Step {index + 1}</Text>
+                    {steps.length > 1 && (
+                      <TouchableOpacity
+                        onPress={() => removeStep(index)}
+                        hitSlop={{
+                          top: 10,
+                          bottom: 10,
+                          left: 10,
+                          right: 10
+                        }}>
+                        <Feather name="x-circle" size={18} color="#d78686" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
 
-          <TouchableOpacity
-            style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
-            onPress={handleSubmit}
-            disabled={submitting}
-            activeOpacity={0.82}
-          >
-            <Text style={styles.submitBtnText}>{submitting ? 'Submitting...' : config.submitText}</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+                  <Text style={styles.stepLabel}>Approver</Text>
+                  <View style={styles.approverList}>
+                    {approvers.slice(0, 20).map((ap) => {
+                      const selected = step.approver === ap._id;
+                      return (
+                        <TouchableOpacity
+                          key={ap._id}
+                          style={[styles.approverChip, selected && styles.approverChipActive]}
+                          onPress={() =>
+                            updateStep(index, { approver: ap._id, role: ap.role, email: (ap.email || '').toLowerCase() })
+                          }
+                          activeOpacity={0.8}
+                          hitSlop={{
+                            top: 10,
+                            bottom: 10,
+                            left: 10,
+                            right: 10
+                          }}>
+                          <Text style={[styles.approverChipText, selected && styles.approverChipTextActive]}>
+                            {ap.name} ({ap.role})
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <TextInput
+                    value={step.email}
+                    onChangeText={(text) => updateStep(index, { email: text })}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    placeholder="Or enter approver email (e.g. hod@college.edu)"
+                    placeholderTextColor="#8f846f"
+                    style={styles.input}
+                  />
+
+                  <TextInput
+                    value={step.remarks}
+                    onChangeText={(text) => updateStep(index, { remarks: text })}
+                    placeholder="Optional remarks for this step"
+                    placeholderTextColor="#8f846f"
+                    style={styles.input}
+                  />
+                </View>
+              ))
+            )}
+
+            <TouchableOpacity
+              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={submitting}
+              activeOpacity={0.82}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
+              <Text style={styles.submitBtnText}>{submitting ? 'Submitting...' : config.submitText}</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: BG },
-  scroll: { paddingHorizontal: 20, paddingTop: Platform.OS === 'ios' ? 56 : 20, paddingBottom: 30 },
+  safe: { flex: 1, backgroundColor: BG , paddingTop: Platform.OS === 'android' ? 64 : 88 },
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 30,
+  },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2a251d' },
   headerTitle: { marginLeft: 12, fontFamily: FONTS.bold, fontSize: 24, color: TEXT_PRIMARY },
