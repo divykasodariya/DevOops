@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import {
+  Animated,
   Keyboard,
   Platform,
   ScrollView,
@@ -8,11 +9,13 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FONTS } from '../theme/typography';
+import { API_BASE } from '../config/api';
 
 const BG = '#16130c';
 const NAV_BG = '#0c0a07';
@@ -23,86 +26,87 @@ const TEXT_MUTED = '#9e947f';
 const TEXT_DARK = '#201a10';
 const GOLD = '#f5d060';
 const BORDER = 'rgba(77,70,54,0.35)';
-const CHAT_STORAGE_KEY = 'aether_chat_messages_v1';
-const TEXT_SECONDARY = '#b5aa95';   // subtitles, supporting text
+const CHAT_STORAGE_KEY = 'aether_chat_messages_v2';
+const HISTORY_STORAGE_KEY = 'aether_chat_history_v2';
+const TEXT_SECONDARY = '#b5aa95';
 
-const quickReply = (message) => {
-  const q = message.toLowerCase();
-  if (q.includes('balance') || q.includes('card')) {
-    return 'Your current campus card balance is $142.50. You spent $12.00 yesterday at the coffee shop.';
-  }
-  if (q.includes('chapter') || q.includes('read')) {
-    return "You need to read Chapter 4: Market Forces of Supply and Demand. I've highlighted the key formulas in your notebook.";
-  }
-  if (q.includes('schedule') || q.includes('class')) {
-    return 'Your next class starts in 45 minutes at Building C. I can set a reminder 10 minutes before it begins.';
-  }
-  return 'I can help with your classes, notes, schedule, and campus services. Tell me what you want to do next.';
-};
+const MAX_HISTORY = 12; // keep last N turns for LLM context
 
 export default function AIAssistantScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const initialInput = typeof params?.q === 'string' ? params.q : '';
   const didInitFromQuery = useRef(false);
+  const scrollRef = useRef(null);
   const [input, setInput] = useState(initialInput);
   const [messages, setMessages] = useState([]);
+  const [llmHistory, setLlmHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Dot animation for typing indicator
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const anim = Animated.loop(
+      Animated.stagger(200, [
+        Animated.sequence([
+          Animated.timing(dot1, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot1, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(dot2, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot2, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(dot3, { toValue: 1, duration: 300, useNativeDriver: true }),
+          Animated.timing(dot3, { toValue: 0, duration: 300, useNativeDriver: true }),
+        ]),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [isLoading]);
 
   const starterMessages = useMemo(
     () => [
       {
-        id: '1',
+        id: 'welcome-1',
         role: 'assistant',
-        text: 'Good morning, Julian. Your first class, Microeconomics, starts in 45 minutes at Building C. Would you like me to pull up your recent notes?',
-        time: '08:15 AM',
-      },
-      {
-        id: '2',
-        role: 'user',
-        text: "Yes, please. And remind me what chapter we're supposed to have read.",
-        time: '08:17 AM',
-      },
-      {
-        id: '3',
-        role: 'assistant',
-        text: "You need to have read Chapter 4: Market Forces of Supply and Demand. I've highlighted the key formulas in your notebook.",
-        time: '08:18 AM',
-        card: {
-          title: 'STUDY MATERIAL',
-          subtitle: 'Chapter 4 Summary & Formulas',
-        },
-      },
-      {
-        id: '4',
-        role: 'user',
-        text: "Perfect. What's my balance on my campus card?",
-        time: '08:20 AM',
-      },
-      {
-        id: '5',
-        role: 'assistant',
-        text: 'Your current campus card balance is $142.50. You spent $12.00 at the coffee shop yesterday.',
-        time: '08:21 AM',
+        text: "Hi! I'm Aether AI — your campus assistant. Ask me about attendance, schedules, requests, notices, or anything else!",
+        time: formatTime(new Date()),
       },
     ],
     []
   );
 
+  // Hydrate messages from storage
   useEffect(() => {
     const hydrate = async () => {
       try {
-        const raw = await AsyncStorage.getItem(CHAT_STORAGE_KEY);
-        if (!raw) {
-          setMessages(starterMessages);
-          return;
-        }
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
+        const [rawMsgs, rawHistory] = await Promise.all([
+          AsyncStorage.getItem(CHAT_STORAGE_KEY),
+          AsyncStorage.getItem(HISTORY_STORAGE_KEY),
+        ]);
+
+        if (rawMsgs) {
+          const parsed = JSON.parse(rawMsgs);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+          } else {
+            setMessages(starterMessages);
+          }
         } else {
           setMessages(starterMessages);
+        }
+
+        if (rawHistory) {
+          const parsed = JSON.parse(rawHistory);
+          if (Array.isArray(parsed)) setLlmHistory(parsed);
         }
       } catch (_) {
         setMessages(starterMessages);
@@ -111,23 +115,27 @@ export default function AIAssistantScreen() {
     hydrate();
   }, [starterMessages]);
 
+  // Persist messages
   useEffect(() => {
     if (!messages.length) return;
     AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)).catch(() => {});
   }, [messages]);
 
+  // Persist LLM history
+  useEffect(() => {
+    AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(llmHistory)).catch(() => {});
+  }, [llmHistory]);
+
+  // Handle initial query from deep link
   useEffect(() => {
     const fromQuery = initialInput.trim();
     if (!fromQuery || !messages.length || didInitFromQuery.current) return;
     didInitFromQuery.current = true;
-    setMessages((prev) => [
-      ...prev,
-      { id: `seed-user-${Date.now()}`, role: 'user', text: fromQuery, time: 'Now' },
-      { id: `seed-assistant-${Date.now()}`, role: 'assistant', text: quickReply(fromQuery), time: 'Now' },
-    ]);
+    sendMessage(fromQuery);
     setInput('');
   }, [initialInput, messages.length]);
 
+  // Keyboard listeners
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
@@ -149,28 +157,93 @@ export default function AIAssistantScreen() {
     };
   }, []);
 
-  const canSend = useMemo(() => input.trim().length > 0, [input]);
+  const canSend = useMemo(() => input.trim().length > 0 && !isLoading, [input, isLoading]);
+
+  const scrollToEnd = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd?.({ animated: true }), 100);
+  }, []);
+
+  const sendMessage = useCallback(async (text) => {
+    if (!text?.trim()) return;
+
+    const now = new Date();
+    const userMsg = {
+      id: `u-${now.getTime()}`,
+      role: 'user',
+      text: text.trim(),
+      time: formatTime(now),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setIsLoading(true);
+    scrollToEnd();
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+
+      const res = await fetch(`${API_BASE}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          message: text.trim(),
+          history: llmHistory.slice(-MAX_HISTORY),
+        }),
+      });
+
+      const data = await res.json();
+      const replyText = data.reply || "Sorry, I couldn't process that. Please try again.";
+
+      const botMsg = {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        text: replyText,
+        time: formatTime(new Date()),
+        toolCalls: data.tool_calls || [],
+      };
+
+      setMessages((prev) => [...prev, botMsg]);
+
+      // Update LLM history for context
+      setLlmHistory((prev) => {
+        const updated = [
+          ...prev,
+          { role: 'user', content: text.trim() },
+          { role: 'assistant', content: replyText },
+        ];
+        return updated.slice(-MAX_HISTORY);
+      });
+
+    } catch (err) {
+      console.error('AI chat error:', err);
+      const errorMsg = {
+        id: `e-${Date.now()}`,
+        role: 'assistant',
+        text: "I'm having trouble connecting right now. Please check your network and try again.",
+        time: formatTime(new Date()),
+        isError: true,
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
+      scrollToEnd();
+    }
+  }, [llmHistory, scrollToEnd]);
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text) return;
-
-    const now = new Date();
-    const userMessage = {
-      id: `u-${now.getTime()}`,
-      role: 'user',
-      text,
-      time: 'Now',
-    };
-    const botMessage = {
-      id: `a-${now.getTime()}`,
-      role: 'assistant',
-      text: quickReply(text),
-      time: 'Now',
-    };
-
-    setMessages((prev) => [...prev, userMessage, botMessage]);
+    if (!text || isLoading) return;
     setInput('');
+    sendMessage(text);
+  };
+
+  const handleClearChat = () => {
+    setMessages(starterMessages);
+    setLlmHistory([]);
+    AsyncStorage.removeItem(CHAT_STORAGE_KEY).catch(() => {});
+    AsyncStorage.removeItem(HISTORY_STORAGE_KEY).catch(() => {});
   };
 
   return (
@@ -183,16 +256,18 @@ export default function AIAssistantScreen() {
           <Text style={styles.brandTitle}>Aether AI</Text>
           <View style={styles.onlineDot} />
         </View>
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.75}>
-          <Feather name="bell" size={18} color={GOLD} />
+        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.75} onPress={handleClearChat}>
+          <Feather name="trash-2" size={18} color={GOLD} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={styles.thread}
         contentContainerStyle={styles.threadContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => scrollToEnd()}
       >
         <View style={styles.dayPill}>
           <Text style={styles.dayPillText}>Today</Text>
@@ -202,8 +277,11 @@ export default function AIAssistantScreen() {
           const isUser = msg.role === 'user';
           return (
             <View key={msg.id} style={[styles.messageWrap, isUser ? styles.userWrap : styles.assistantWrap]}>
-              <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-                <Text style={[styles.bubbleText, isUser ? styles.userBubbleText : styles.assistantBubbleText]}>{msg.text}</Text>
+              <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble,
+                msg.isError && styles.errorBubble]}>
+                <Text style={[styles.bubbleText, isUser ? styles.userBubbleText : styles.assistantBubbleText]}>
+                  {msg.text}
+                </Text>
                 {!!msg.card && (
                   <View style={styles.inlineCard}>
                     <View style={styles.inlineCardIcon}>
@@ -215,19 +293,47 @@ export default function AIAssistantScreen() {
                     </View>
                   </View>
                 )}
+                {/* Show tool call badges */}
+                {msg.toolCalls && msg.toolCalls.length > 0 && (
+                  <View style={styles.toolRow}>
+                    {msg.toolCalls.map((tc, i) => (
+                      <View key={i} style={styles.toolBadge}>
+                        <Feather name="zap" size={10} color={GOLD} />
+                        <Text style={styles.toolBadgeText}>{tc.tool}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
               <Text style={[styles.timeLabel, isUser ? styles.timeLabelUser : null]}>{msg.time}</Text>
             </View>
           );
         })}
+
+        {/* Typing indicator */}
+        {isLoading && (
+          <View style={[styles.messageWrap, styles.assistantWrap]}>
+            <View style={[styles.bubble, styles.assistantBubble, styles.typingBubble]}>
+              <View style={styles.typingRow}>
+                {[dot1, dot2, dot3].map((dot, i) => (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.typingDot,
+                      { transform: [{ translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -6] }) }] },
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       <View
         style={[
           styles.composerDock,
-          {
-            bottom: keyboardVisible ? keyboardHeight : NAV_H,
-          },
+          { bottom: keyboardVisible ? keyboardHeight : NAV_H },
         ]}
       >
         <View style={styles.composerRow}>
@@ -243,6 +349,7 @@ export default function AIAssistantScreen() {
               style={styles.input}
               returnKeyType="send"
               onSubmitEditing={handleSend}
+              editable={!isLoading}
             />
             <TouchableOpacity style={styles.micBtn} activeOpacity={0.75}>
               <Feather name="mic" size={18} color={GOLD} />
@@ -254,7 +361,11 @@ export default function AIAssistantScreen() {
             disabled={!canSend}
             activeOpacity={0.85}
           >
-            <Feather name="arrow-up" size={18} color={BG} />
+            {isLoading ? (
+              <ActivityIndicator size="small" color={BG} />
+            ) : (
+              <Feather name="arrow-up" size={18} color={BG} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -283,6 +394,14 @@ export default function AIAssistantScreen() {
       </View>
     </View>
   );
+}
+
+function formatTime(date) {
+  let h = date.getHours();
+  const m = date.getMinutes();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m.toString().padStart(2, '0')} ${ap}`;
 }
 
 const NAV_H = Platform.OS === 'ios' ? 84 : 66;
@@ -332,7 +451,8 @@ const styles = StyleSheet.create({
   bubble: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12 },
   assistantBubble: { backgroundColor: BUBBLE_ASSISTANT },
   userBubble: { backgroundColor: BUBBLE_USER },
-  bubbleText: { fontFamily: FONTS.medium, fontSize: 22, lineHeight: 31 },
+  errorBubble: { borderWidth: 1, borderColor: 'rgba(239,83,80,0.4)' },
+  bubbleText: { fontFamily: FONTS.medium, fontSize: 15, lineHeight: 22 },
   assistantBubbleText: { color: TEXT_PRIMARY },
   userBubbleText: { color: TEXT_DARK },
   timeLabel: { marginTop: 4, marginLeft: 4, fontFamily: FONTS.medium, fontSize: 10, color: TEXT_MUTED },
@@ -359,6 +479,41 @@ const styles = StyleSheet.create({
   },
   inlineCardTitle: { color: TEXT_PRIMARY, fontFamily: FONTS.bold, fontSize: 11, letterSpacing: 0.8 },
   inlineCardSubtitle: { color: TEXT_SECONDARY, fontFamily: FONTS.medium, fontSize: 12, marginTop: 2 },
+
+  // Tool call badges
+  toolRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  toolBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(245,208,96,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245,208,96,0.2)',
+  },
+  toolBadgeText: {
+    fontFamily: FONTS.medium,
+    fontSize: 10,
+    color: GOLD,
+    textTransform: 'lowercase',
+  },
+
+  // Typing indicator
+  typingBubble: { paddingVertical: 16, paddingHorizontal: 20 },
+  typingRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: TEXT_MUTED,
+  },
 
   composerDock: {
     position: 'absolute',

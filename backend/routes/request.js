@@ -25,10 +25,10 @@ router.route('/approvers')
 router.route('/resolve-approver')
   .get(protect, resolveApproverByEmail);
 
-router.route('/:id')
-  .get(protect, getRequestById);
-
 router.route('/action')
   .post(protect, authorize('faculty', 'admin'), actionRequest);
+
+router.route('/:id')
+  .get(protect, getRequestById);
 
 export default router;

@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-load_dotenv()  # add this line BEFORE the Settings class
+load_dotenv(override=True)  # add this line BEFORE the Settings class
 
 from pydantic_settings import BaseSettings
 from functools import lru_cache
@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     TEMPERATURE: float = 0.2     
     
     NODE_BACKEND_URL: str = "http://localhost:6969"
-    NODE_INTERNAL_SECRET: str = "dev-token"             # low = deterministic outputs
+    NODE_INTERNAL_SECRET: str = "dev-token"
+    JWT_SECRET: str = "sehack_super_secret_key_12345"
 
     class Config:
         env_file = ".env"
