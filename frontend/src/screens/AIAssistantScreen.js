@@ -602,6 +602,7 @@ export default function AIAssistantScreen() {
           </PressableScale>
           <PressableScale
             style={styles.navItem}
+            onPress={() => router.push('/profile')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Feather name="user" size={20} color={TEXT_MUTED} />
