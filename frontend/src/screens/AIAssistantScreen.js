@@ -449,7 +449,7 @@ export default function AIAssistantScreen() {
           styles.composerDock,
           { bottom: keyboardVisible ? keyboardHeight : NAV_H },
         ]}
-      >
+      />
         <View style={styles.composerRow}>
           <TouchableOpacity style={styles.plusBtn} activeOpacity={0.75}>
             <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
