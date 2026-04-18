@@ -11,5 +11,6 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  /** Match app screens — avoids white hairlines where transparent views gap (ScrollView, flex rows). */
+  root: { flex: 1, backgroundColor: '#16130c' },
 });

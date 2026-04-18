@@ -215,6 +215,7 @@ export default function ScheduleScreen() {
       </View>
 
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -439,11 +440,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: theme.primary,
   },
+  scrollView: {
+    flex: 1,
+    backgroundColor: theme.bg,
+  },
   scrollContent: {
     paddingHorizontal: SPACING.medium,
     paddingTop: S.xs,
     width: '100%',
     alignSelf: 'stretch',
+    backgroundColor: theme.bg,
   },
 
   headerTextRow: {
@@ -634,6 +640,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
     width: '100%',
     maxWidth: '100%',
+    backgroundColor: theme.bg,
   },
   tlCardOuter: {
     flexGrow: 1,
@@ -709,19 +716,23 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.18,
-        shadowRadius: 6,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
       },
-      android: { elevation: 3 },
+      android: { elevation: 2 },
     }),
   },
   tlTitle: {
     fontFamily: FONTS.semibold,
     fontSize: 15,
+    lineHeight: 21,
     color: theme.text,
     marginBottom: S.xs,
     flexShrink: 1,
+    ...Platform.select({
+      android: { includeFontPadding: false },
+    }),
   },
   tlMetaRow: {
     flexDirection: 'row',
@@ -736,7 +747,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontFamily: FONTS.medium,
     fontSize: 13,
+    lineHeight: 19,
     color: theme.textMuted,
+    ...Platform.select({
+      android: { includeFontPadding: false },
+    }),
   },
   typePill: {
     alignSelf: 'flex-start',
