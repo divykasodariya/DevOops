@@ -26,7 +26,7 @@ router.route('/resolve-approver')
   .get(protect, resolveApproverByEmail);
 
 router.route('/action')
-  .post(protect, authorize('faculty', 'admin'), actionRequest);
+  .post(protect, authorize('faculty', 'hod', 'principal', 'admin'), actionRequest);
 
 router.route('/:id')
   .get(protect, getRequestById);

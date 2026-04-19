@@ -1,9 +1,65 @@
+import mongoose from 'mongoose';
 import ApprovalRequest from '../models/ApprovalRequest.js';
 import ProfessorProfile from '../models/ProfessorProfile.js';
 import { Notification } from '../models/Notification.js';
 import { Department } from '../models/Department.js';
 import { Schedule } from '../models/Schedule.js';
 import User from '../models/User.js';
+
+const HEX24 = /^[a-f0-9]{24}$/i;
+
+/** Stable 24-char hex for any ObjectId / populated ref the client may see. */
+const toHexId = (v) => {
+  if (v == null || v === '') return null;
+  if (typeof v === 'string') return HEX24.test(v) ? v : null;
+  if (v instanceof mongoose.Types.ObjectId) return v.toHexString();
+  if (typeof v === 'object') {
+    if (typeof v.$oid === 'string' && HEX24.test(v.$oid)) return v.$oid;
+    if (v._id !== undefined) return toHexId(v._id);
+    if (typeof v.toString === 'function') {
+      const t = v.toString();
+      if (HEX24.test(t)) return t;
+    }
+  }
+  return null;
+};
+
+/**
+ * User ref after populate is { _id, name, email }; without populate it is a bare ObjectId.
+ * React Native JSON can lose Mongoose helpers, so we always emit a plain object with string _id.
+ */
+const shapeUserRefForClient = (u) => {
+  if (u == null) return null;
+  if (typeof u === 'object' && (u.name != null || u.email != null)) {
+    const id = toHexId(u._id ?? u);
+    if (!id) return null;
+    return { _id: id, name: u.name ?? null, email: u.email ?? null };
+  }
+  const id = toHexId(u);
+  return id ? { _id: id, name: null, email: null } : null;
+};
+
+/** Plain JSON-safe approval document for list/detail/create responses. */
+const shapeApprovalRequestForClient = (doc) => {
+  const o = doc?.toObject?.({ flattenMaps: true }) ?? doc;
+  const id = toHexId(o._id);
+  if (!id) return o;
+
+  return {
+    ...o,
+    _id: id,
+    requestedBy: shapeUserRefForClient(o.requestedBy),
+    department: o.department != null ? toHexId(o.department) ?? o.department : o.department,
+    relatedSchedule:
+      o.relatedSchedule != null ? toHexId(o.relatedSchedule) ?? o.relatedSchedule : o.relatedSchedule,
+    steps: Array.isArray(o.steps)
+      ? o.steps.map((s) => ({
+          ...s,
+          approver: shapeUserRefForClient(s.approver),
+        }))
+      : o.steps,
+  };
+};
 
 const calculateMatchScore = (requestTags, professorInterests) => {
   if (!requestTags || requestTags.length === 0) return 0;
@@ -20,7 +76,14 @@ const calculateMatchScore = (requestTags, professorInterests) => {
 
 export const createRequest = async (req, res) => {
   try {
-    const { type, title, description, meta, steps: customSteps } = req.body;
+    const { type, title, description, meta, steps: customSteps, attachments: rawAttachments } = req.body;
+
+    // Normalise attachments (may come from AI chat or manual upload)
+    const attachments = Array.isArray(rawAttachments)
+      ? rawAttachments
+          .filter((a) => a && a.url && a.fileName)
+          .map((a) => ({ fileName: a.fileName, url: a.url, mimeType: a.mimeType || '', size: a.size || 0 }))
+      : [];
 
     let steps = [];
     const validRoles = ['faculty', 'hod', 'principal', 'admin', 'support'];
@@ -118,12 +181,13 @@ export const createRequest = async (req, res) => {
 
     const request = await ApprovalRequest.create({
       requestedBy: req.user._id,
-      department: req.user.department, // Assuming user has department populated
+      department: req.user.department,
       type,
       title,
       description,
       steps,
-      meta
+      meta,
+      attachments,
     });
 
     // Notify the first approver
@@ -138,7 +202,11 @@ export const createRequest = async (req, res) => {
       });
     }
 
-    res.status(201).json(request);
+    const populated = await ApprovalRequest.findById(request._id)
+      .populate('requestedBy', 'name email')
+      .populate('steps.approver', 'name email');
+
+    res.status(201).json(shapeApprovalRequestForClient(populated));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -153,17 +221,20 @@ export const getRequests = async (req, res) => {
       requests = await ApprovalRequest.find({ requestedBy: req.user._id })
         .populate('requestedBy', 'name email')
         .populate('steps.approver', 'name email');
+    } else if (req.user.role === 'admin') {
+      // Admins can act on any step server-side; return the full pending queue
+      requests = await ApprovalRequest.find({ overallStatus: 'pending' })
+        .populate('requestedBy', 'name email')
+        .populate('steps.approver', 'name email');
     } else {
-      // Faculty, HOD, Principal, Admin etc. see requests where they are an approver and it's their turn
-      // Note: Admin might want to see all, but for now we follow the user prompt exactly:
-      // Faculty/HOD hits GET /requests -> query { 'steps.approver': userId, 'steps.status': 'pending' }
-      requests = await ApprovalRequest.find({
-        'steps.approver': req.user._id,
-        'steps.status': 'pending'
-      }).populate('requestedBy', 'name email').populate('steps.approver', 'name email');
+      // Faculty / HOD / principal / support: see all pending requests
+      // Any authorised role can review & act on pending steps
+      requests = await ApprovalRequest.find({ overallStatus: 'pending' })
+        .populate('requestedBy', 'name email')
+        .populate('steps.approver', 'name email');
     }
 
-    res.json(requests);
+    res.json(requests.map((r) => shapeApprovalRequestForClient(r)));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -179,7 +250,7 @@ export const getRequestById = async (req, res) => {
       return res.status(404).json({ message: 'Request not found' });
     }
 
-    res.json(request);
+    res.json(shapeApprovalRequestForClient(request));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -210,8 +281,9 @@ export const actionRequest = async (req, res) => {
 
     const currentStep = request.steps[currentStepIndex];
 
-    // Verify authorized user
-    if (currentStep.approver.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    // Any faculty / hod / principal / admin / support may act on pending steps
+    const authorisedRoles = ['faculty', 'hod', 'principal', 'admin', 'support'];
+    if (!authorisedRoles.includes(req.user.role)) {
       return res.status(403).json({ message: 'Not authorized to action this step' });
     }
 
@@ -297,7 +369,11 @@ export const actionRequest = async (req, res) => {
 
     await request.save();
 
-    res.json(request);
+    const fresh = await ApprovalRequest.findById(request._id)
+      .populate('requestedBy', 'name email')
+      .populate('steps.approver', 'name email');
+
+    res.json(shapeApprovalRequestForClient(fresh));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -438,6 +438,7 @@ export default function BookSpaceScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.navI}
+          onPress={() => router.push('/profile')}
           hitSlop={{
             top: 10,
             bottom: 10,

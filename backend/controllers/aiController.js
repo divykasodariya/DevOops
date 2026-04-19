@@ -11,10 +11,10 @@ const GROQ_WHISPER_MODEL = process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3-t
 
 export const chatWithAI = async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message, history = [], attachments = [] } = req.body;
 
-    if (!message || !message.trim()) {
-      return res.status(400).json({ message: 'Message is required' });
+    if ((!message || !message.trim()) && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ message: 'Message or attachments are required' });
     }
 
     // Extract JWT token from cookie or Authorization header
@@ -23,21 +23,29 @@ export const chatWithAI = async (req, res) => {
       token = req.headers.authorization.split(' ')[1];
     }
 
+    // If attachments are present, append info to the message so the LLM knows
+    let enrichedMessage = (message || '').trim();
+    if (attachments.length > 0) {
+      const fileList = attachments.map((a) => a.fileName || 'document').join(', ');
+      enrichedMessage += `\n\n[User has attached ${attachments.length} document(s): ${fileList}]`;
+    }
+
     // Build the payload for FastAPI /api/copilot/agent
     const payload = {
-      message:    message.trim(),
-      session_id: req.user._id.toString(),   // use user ID as session
-      user_id:    req.user._id.toString(),
-      role:       req.user.role || 'student',
+      message: enrichedMessage,
+      session_id: req.user._id.toString(),
+      user_id: req.user._id.toString(),
+      role: req.user.role || 'student',
       history,
       token,
+      attachments,
     };
 
     // Forward to FastAPI
     const response = await fetch(`${AI_SERVICE_URL}/api/copilot/agent`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -45,24 +53,24 @@ export const chatWithAI = async (req, res) => {
       console.error(`AI service error (${response.status}):`, errText);
       return res.status(502).json({
         message: 'AI service returned an error',
-        reply:   'Sorry, I\'m having trouble right now. Please try again in a moment.',
+        reply: 'Sorry, I\'m having trouble right now. Please try again in a moment.',
       });
     }
 
     const data = await response.json();
 
     return res.status(200).json({
-      reply:      data.reply      || 'I couldn\'t generate a response.',
+      reply: data.reply || 'I couldn\'t generate a response.',
       tool_calls: data.tool_calls || [],
-      results:    data.results    || {},
-      thoughts:   data.thoughts   || '',
+      results: data.results || {},
+      thoughts: data.thoughts || '',
     });
 
   } catch (error) {
     console.error('AI controller error:', error);
     return res.status(500).json({
       message: 'Internal server error',
-      reply:   'Sorry, something went wrong. Please try again.',
+      reply: 'Sorry, something went wrong. Please try again.',
     });
   }
 };
@@ -95,7 +103,7 @@ export const transcribeAudio = async (req, res) => {
     form.append('file', new Blob([req.file.buffer], { type: mime }), filename);
 
     const response = await fetch(GROQ_TRANSCRIBE_URL, {
-      method:  'POST',
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
       },
@@ -115,5 +123,29 @@ export const transcribeAudio = async (req, res) => {
   } catch (error) {
     console.error('transcribeAudio error:', error);
     return res.status(500).json({ message: 'Failed to transcribe audio' });
+  }
+};
+
+/**
+ * POST multipart field `document` — save to disk and return URL.
+ * The client can then reference this URL when creating an AI-assisted approval request.
+ */
+export const uploadDocument = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No document file (field name: document)' });
+    }
+
+    const url = `${req.protocol}://${req.get('host')}/uploads/documents/${req.file.filename}`;
+
+    return res.status(201).json({
+      fileName: req.file.originalname,
+      url,
+      mimeType: req.file.mimetype,
+      size: req.file.size,
+    });
+  } catch (error) {
+    console.error('uploadDocument error:', error);
+    return res.status(500).json({ message: 'Failed to upload document' });
   }
 };

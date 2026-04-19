@@ -38,6 +38,15 @@ const approvalRequestSchema = new Schema(
 
     meta: { type: Schema.Types.Mixed },
 
+    attachments: [
+      {
+        fileName: { type: String, required: true },
+        url:      { type: String, required: true },
+        mimeType: String,
+        size:     Number,
+      },
+    ],
+
     generatedDocument: {
       url:         String,
       generatedAt: Date,

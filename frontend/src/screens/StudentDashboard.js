@@ -512,7 +512,13 @@ export default function StudentDashboard() {
           <Feather name="bell" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>ALERTS</Text>
         </PressableScale>
-        <PressableScale style={styles.navItemFlex} onPress={() => lightHaptic()}>
+        <PressableScale
+          style={styles.navItemFlex}
+          onPress={() => {
+            lightHaptic();
+            router.push('/profile');
+          }}
+        >
           <Feather name="user" size={22} color={TEXT_MUTED} />
           <Text style={styles.navLbl}>PROFILE</Text>
         </PressableScale>

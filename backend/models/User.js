@@ -50,7 +50,6 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 userSchema.index({ role: 1, department: 1 });
-userSchema.index({ email: 1 });
 
 export const User = model('User', userSchema);
 export default User;

@@ -122,6 +122,16 @@ TOOLS = {
         "description": "Approve or reject a pending approval request",
         "params": ["request_id", "action", "remarks"],
     },
+    "submit_document_request": {
+        "description": (
+            "Submit a document or image for faculty review/signing. Use when a user has uploaded a file/image and wants to "
+            "send it to a faculty member. REQUIRED: title (a short description like 'Sick leave certificate for signing'). "
+            "Optional: description, faculty_email (target professor's email). "
+            "The attachments are passed automatically from the chat context — do NOT invent attachment URLs. "
+            "Example: {\"title\":\"Medical certificate\",\"description\":\"Please review\",\"faculty_email\":\"prof@college.edu\"}"
+        ),
+        "params": ["title", "description", "faculty_email"],
+    },
 
     # ── Issues ───────────────────────────────────────────────
     "report_issue": {
@@ -204,6 +214,7 @@ Rules:
 - Never make up room codes — only use listed spaces.
 - Never make up data — use tools to fetch real data
 - You can call multiple tools in one shot
+- When the user has attached a document or image and wants to send it to someone for signing/review/approval, use submit_document_request. Document/image attachments are handled automatically so you don't need to specify their URLs.
 """
 
 
@@ -213,10 +224,13 @@ async def run_agent(
     role:     str = "student",
     history:  list = None,
     token:    str = "",
+    attachments: list = None,
 ) -> dict:
 
     if history is None:
         history = []
+    if attachments is None:
+        attachments = []
 
     # If no token provided, generate a fresh one using the shared secret
     if not token or token.strip() == "":
@@ -364,6 +378,27 @@ async def run_agent(
                     action=params.get("action", ""),
                     remarks=params.get("remarks", ""),
                 )
+
+            elif tool_name == "submit_document_request":
+                # Build the request payload with document type
+                doc_title = params.get("title") or "Document for review"
+                doc_desc  = params.get("description") or "Please review the attached document."
+                doc_meta  = {"source": "ai_chat", "requiresSignature": True}
+                faculty_email = params.get("faculty_email") or ""
+                if faculty_email:
+                    doc_meta["facultyEmail"] = faculty_email
+
+                req_body = {
+                    "type": "certificate",
+                    "title": doc_title,
+                    "description": doc_desc,
+                    "meta": doc_meta,
+                }
+
+                # Attachments are injected from the chat context
+                if attachments:
+                    req_body["attachments"] = attachments
+                results["submit_document_request"] = await create_request(token, req_body)
 
             # ── Issues ───────────────────────────────────────────
             elif tool_name == "report_issue":
