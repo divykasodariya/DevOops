@@ -29,20 +29,20 @@ import { FONTS } from '../theme/typography';
 import { API_BASE } from '../config/api';
 import PressableScale from '../components/dashboard/PressableScale';
 
-const BG              = '#16130c';
-const NAV_BG          = '#0c0a07';
-const BUBBLE_ASSISTANT= '#2b2419';
-const BUBBLE_USER     = '#dfbb56';
-const TEXT_PRIMARY    = '#e9e2d5';
-const TEXT_MUTED      = '#9e947f';
-const TEXT_DARK       = '#201a10';
-const GOLD            = '#f5d060';
-const BORDER          = 'rgba(77,70,54,0.35)';
-const TEXT_SECONDARY  = '#b5aa95';
+const BG = '#16130c';
+const NAV_BG = '#0c0a07';
+const BUBBLE_ASSISTANT = '#2b2419';
+const BUBBLE_USER = '#dfbb56';
+const TEXT_PRIMARY = '#e9e2d5';
+const TEXT_MUTED = '#9e947f';
+const TEXT_DARK = '#201a10';
+const GOLD = '#f5d060';
+const BORDER = 'rgba(77,70,54,0.35)';
+const TEXT_SECONDARY = '#b5aa95';
 
-const CHAT_STORAGE_KEY   = 'aether_chat_messages_v2';
-const HISTORY_STORAGE_KEY= 'aether_chat_history_v2';
-const MAX_HISTORY        = 12;
+const CHAT_STORAGE_KEY = 'aether_chat_messages_v2';
+const HISTORY_STORAGE_KEY = 'aether_chat_history_v2';
+const MAX_HISTORY = 12;
 
 // ─── Nav height constant (used for bottom offset) ───────────────────────────
 const NAV_H = Platform.OS === 'ios' ? 84 : 66;
@@ -52,18 +52,18 @@ const KEYBOARD_EXTRA_GAP = 10;
 const COMPOSER_H = Platform.OS === 'ios' ? 62 : 58;
 
 export default function AIAssistantScreen() {
-  const router         = useRouter();
-  const params         = useLocalSearchParams();
-  const insets         = useSafeAreaInsets();
-  const initialInput   = typeof params?.q === 'string' ? params.q : '';
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
+  const initialInput = typeof params?.q === 'string' ? params.q : '';
   const didInitFromQuery = useRef(false);
-  const scrollRef      = useRef(null);
-  const recordingRef   = useRef(null);
+  const scrollRef = useRef(null);
+  const recordingRef = useRef(null);
 
-  const [input, setInput]             = useState(initialInput);
-  const [messages, setMessages]       = useState([]);
-  const [llmHistory, setLlmHistory]   = useState([]);
-  const [isLoading, setIsLoading]     = useState(false);
+  const [input, setInput] = useState(initialInput);
+  const [messages, setMessages] = useState([]);
+  const [llmHistory, setLlmHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -139,11 +139,11 @@ export default function AIAssistantScreen() {
 
   useEffect(() => {
     if (!messages.length) return;
-    AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)).catch(() => {});
+    AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages)).catch(() => { });
   }, [messages]);
 
   useEffect(() => {
-    AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(llmHistory)).catch(() => {});
+    AsyncStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(llmHistory)).catch(() => { });
   }, [llmHistory]);
 
   // ── Deep-link initial query ────────────────────────────────────────────────
@@ -177,7 +177,7 @@ export default function AIAssistantScreen() {
   // ── Cleanup recording on unmount ───────────────────────────────────────────
   useEffect(() => {
     return () => {
-      recordingRef.current?.stopAndUnloadAsync().catch(() => {});
+      recordingRef.current?.stopAndUnloadAsync().catch(() => { });
       recordingRef.current = null;
     };
   }, []);
@@ -189,10 +189,10 @@ export default function AIAssistantScreen() {
   }, [isInputFocused, inputFocus]);
 
   const inputWrapAnimatedStyle = useAnimatedStyle(() => ({
-    transform:     [{ scale: 1 + inputFocus.value * 0.01 }],
+    transform: [{ scale: 1 + inputFocus.value * 0.01 }],
     shadowOpacity: 0.08 + inputFocus.value * 0.12,
-    shadowRadius:  2    + inputFocus.value * 6,
-    elevation:     1    + inputFocus.value * 2,
+    shadowRadius: 2 + inputFocus.value * 6,
+    elevation: 1 + inputFocus.value * 2,
   }));
 
   // ── Scroll helpers ─────────────────────────────────────────────────────────
@@ -203,10 +203,10 @@ export default function AIAssistantScreen() {
   // ── Send ───────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(async (text) => {
     if (!text?.trim() && attachments.length === 0) return;
-    const now    = new Date();
+    const now = new Date();
     const currentAttachments = [...attachments];
     const userMsg = {
-      id:   `u-${now.getTime()}`,
+      id: `u-${now.getTime()}`,
       role: 'user',
       text: (text || '').trim(),
       time: formatTime(now),
@@ -220,8 +220,8 @@ export default function AIAssistantScreen() {
 
     try {
       const token = await AsyncStorage.getItem('token');
-      const res   = await fetch(`${API_BASE}/ai/chat`, {
-        method:  'POST',
+      const res = await fetch(`${API_BASE}/ai/chat`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -233,13 +233,13 @@ export default function AIAssistantScreen() {
         }),
       });
 
-      const data      = await res.json();
+      const data = await res.json();
       const replyText = data.reply || "Sorry, I couldn't process that. Please try again.";
-      const botMsg    = {
-        id:        `a-${Date.now()}`,
-        role:      'assistant',
-        text:      replyText,
-        time:      formatTime(new Date()),
+      const botMsg = {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        text: replyText,
+        time: formatTime(new Date()),
         toolCalls: data.tool_calls || [],
       };
 
@@ -247,8 +247,8 @@ export default function AIAssistantScreen() {
       setLlmHistory((prev) => {
         const updated = [
           ...prev,
-          { role: 'user',      content: (text || '').trim() },
-          { role: 'assistant', content: replyText   },
+          { role: 'user', content: (text || '').trim() },
+          { role: 'assistant', content: replyText },
         ];
         return updated.slice(-MAX_HISTORY);
       });
@@ -257,10 +257,10 @@ export default function AIAssistantScreen() {
       setMessages((prev) => [
         ...prev,
         {
-          id:      `e-${Date.now()}`,
-          role:    'assistant',
-          text:    "I'm having trouble connecting right now. Please check your network and try again.",
-          time:    formatTime(new Date()),
+          id: `e-${Date.now()}`,
+          role: 'assistant',
+          text: "I'm having trouble connecting right now. Please check your network and try again.",
+          time: formatTime(new Date()),
           isError: true,
         },
       ]);
@@ -284,9 +284,9 @@ export default function AIAssistantScreen() {
         copyToCacheDirectory: true,
       });
       if (result.canceled) return;
-      
+
       const file = result.assets[0];
-      
+
       setIsUploadingDoc(true);
       const token = await AsyncStorage.getItem('token');
       const formData = new FormData();
@@ -295,7 +295,7 @@ export default function AIAssistantScreen() {
         name: file.name,
         type: file.mimeType || 'application/octet-stream',
       });
-      
+
       const res = await fetch(`${API_BASE}/ai/upload-doc`, {
         method: 'POST',
         headers: {
@@ -303,10 +303,10 @@ export default function AIAssistantScreen() {
         },
         body: formData,
       });
-      
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Upload failed');
-      
+
       setAttachments((prev) => [...prev, data]);
     } catch (err) {
       console.error('Doc upload error:', err);
@@ -319,13 +319,13 @@ export default function AIAssistantScreen() {
   const handleClearChat = () => {
     setMessages(starterMessages);
     setLlmHistory([]);
-    AsyncStorage.removeItem(CHAT_STORAGE_KEY).catch(() => {});
-    AsyncStorage.removeItem(HISTORY_STORAGE_KEY).catch(() => {});
+    AsyncStorage.removeItem(CHAT_STORAGE_KEY).catch(() => { });
+    AsyncStorage.removeItem(HISTORY_STORAGE_KEY).catch(() => { });
   };
 
   // ── Voice recording ────────────────────────────────────────────────────────
   const stopRecordingAndUpload = useCallback(async () => {
-    const rec          = recordingRef.current;
+    const rec = recordingRef.current;
     recordingRef.current = null;
     setIsRecording(false);
     if (!rec) return;
@@ -336,17 +336,17 @@ export default function AIAssistantScreen() {
       const uri = rec.getURI();
       if (!uri) { Alert.alert('Recording', 'Could not read the recording file.'); return; }
 
-      const token  = await AsyncStorage.getItem('token');
+      const token = await AsyncStorage.getItem('token');
       const result = await FileSystem.uploadAsync(`${API_BASE}/ai/transcribe`, uri, {
         httpMethod: 'POST',
         uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName:  'audio',
-        mimeType:   Platform.OS === 'android' ? 'audio/mp4' : 'audio/m4a',
-        headers:    token ? { Authorization: `Bearer ${token}` } : {},
+        fieldName: 'audio',
+        mimeType: Platform.OS === 'android' ? 'audio/mp4' : 'audio/m4a',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       let data = {};
-      try { data = result.body ? JSON.parse(result.body) : {}; } catch (_) {}
+      try { data = result.body ? JSON.parse(result.body) : {}; } catch (_) { }
       if (result.status < 200 || result.status >= 300) {
         throw new Error(data.message || `Transcription failed (${result.status})`);
       }
@@ -374,8 +374,8 @@ export default function AIAssistantScreen() {
         return;
       }
       await Audio.setAudioModeAsync({
-        allowsRecordingIOS:      true,
-        playsInSilentModeIOS:    true,
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
         staysActiveInBackground: false,
       });
       const { recording } = await Audio.Recording.createAsync(
@@ -561,7 +561,7 @@ export default function AIAssistantScreen() {
                           transform: [
                             {
                               translateY: dot.interpolate({
-                                inputRange:  [0, 1],
+                                inputRange: [0, 1],
                                 outputRange: [0, -6],
                               }),
                             },
@@ -594,9 +594,9 @@ export default function AIAssistantScreen() {
           <View style={styles.composerRow}>
             <PressableScale style={styles.plusBtn} scaleTo={0.95} onPress={pickDocument} disabled={isUploadingDoc}>
               {isUploadingDoc ? (
-                 <ActivityIndicator size="small" color={TEXT_PRIMARY} />
+                <ActivityIndicator size="small" color={TEXT_PRIMARY} />
               ) : (
-                 <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
+                <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
               )}
             </PressableScale>
 
@@ -690,10 +690,10 @@ export default function AIAssistantScreen() {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function formatTime(date) {
-  let h      = date.getHours();
-  const m    = date.getMinutes();
-  const ap   = h >= 12 ? 'PM' : 'AM';
-  h          = h % 12 || 12;
+  let h = date.getHours();
+  const m = date.getMinutes();
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
   return `${h}:${m.toString().padStart(2, '0')} ${ap}`;
 }
 
@@ -720,122 +720,122 @@ const styles = StyleSheet.create({
   header: {
     // ✅ FIX 3: Replaced the over-sized fixed heights (108/76px) with a compact,
     // symmetric value. paddingTop:10 gives breathing room without wasting screen.
-    height:              Platform.OS === 'ios' ? 56 : 52,
-    paddingTop:          Platform.OS === 'ios' ? 6 : 4,
-    paddingHorizontal:   16,
-    backgroundColor:     '#0f0d09',
-    borderBottomWidth:   1,
-    borderBottomColor:   '#201c15',
-    flexDirection:       'row',
-    alignItems:          'center',
-    justifyContent:      'space-between',
+    height: Platform.OS === 'ios' ? 56 : 52,
+    paddingTop: Platform.OS === 'ios' ? 6 : 4,
+    paddingHorizontal: 16,
+    backgroundColor: '#0f0d09',
+    borderBottomWidth: 1,
+    borderBottomColor: '#201c15',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  brandRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   avatarWrap: {
-    width:           28,
-    height:          28,
-    borderRadius:    14,
-    borderWidth:     1,
-    borderColor:     BORDER,
-    justifyContent:  'center',
-    alignItems:      'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BORDER,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: '#1d1912',
   },
   brandTitle: { color: GOLD, fontFamily: FONTS.bold, fontSize: 23 },
-  onlineDot:  { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD },
-  bellBtn:    { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
+  onlineDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD },
+  bellBtn: { width: 32, height: 32, justifyContent: 'center', alignItems: 'center' },
 
   // ── Message thread ──
-  thread:        { flex: 1 },
+  thread: { flex: 1 },
   threadContent: {
     paddingHorizontal: 14,
     // ✅ FIX 4: paddingTop reduced from 16 → 10 so messages start closer to
     // the header for a tighter, more immersive feel.
-    paddingTop:        10,
+    paddingTop: 10,
     // paddingBottom is set dynamically above the composer height so the last
     // message is never hidden behind the input bar.
   },
 
   dayPill: {
-    alignSelf:        'center',
-    backgroundColor:  '#2a251d',
-    borderRadius:     10,
+    alignSelf: 'center',
+    backgroundColor: '#2a251d',
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical:  3,
-    marginBottom:     10,
+    paddingVertical: 3,
+    marginBottom: 10,
   },
   dayPillText: { color: TEXT_MUTED, fontFamily: FONTS.medium, fontSize: 11 },
 
-  messageWrap:   { marginBottom: 12, maxWidth: '80%' },
+  messageWrap: { marginBottom: 12, maxWidth: '80%' },
   assistantWrap: { alignSelf: 'flex-start' },
-  userWrap:      { alignSelf: 'flex-end' },
+  userWrap: { alignSelf: 'flex-end' },
 
-  bubble:          { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 11 },
+  bubble: { borderRadius: 18, paddingHorizontal: 14, paddingVertical: 11 },
   assistantBubble: {
     backgroundColor: BUBBLE_ASSISTANT,
-    shadowColor:     '#000',
-    shadowOffset:    { width: 0, height: 2 },
-    shadowOpacity:   0.14,
-    shadowRadius:    4,
-    elevation:       1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  userBubble:  { backgroundColor: BUBBLE_USER },
+  userBubble: { backgroundColor: BUBBLE_USER },
   errorBubble: { borderWidth: 1, borderColor: 'rgba(239,83,80,0.4)' },
 
-  bubbleText:          { fontFamily: FONTS.medium, fontSize: 15, lineHeight: 24 },
+  bubbleText: { fontFamily: FONTS.medium, fontSize: 15, lineHeight: 24 },
   assistantBubbleText: { color: TEXT_PRIMARY },
-  userBubbleText:      { color: TEXT_DARK },
+  userBubbleText: { color: TEXT_DARK },
 
-  timeLabel:     { marginTop: 4, marginLeft: 6, fontFamily: FONTS.medium, fontSize: 10, color: '#8f8570' },
+  timeLabel: { marginTop: 4, marginLeft: 6, fontFamily: FONTS.medium, fontSize: 10, color: '#8f8570' },
   timeLabelUser: { textAlign: 'right', marginRight: 4, marginLeft: 0 },
 
   // ── Inline card ──
   inlineCard: {
-    marginTop:       12,
-    borderRadius:    12,
-    borderWidth:     1,
-    borderColor:     BORDER,
+    marginTop: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
     backgroundColor: '#201b13',
-    padding:         10,
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             10,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   inlineCardIcon: {
-    width:           34,
-    height:          34,
-    borderRadius:    8,
-    justifyContent:  'center',
-    alignItems:      'center',
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'rgba(245,208,96,0.14)',
   },
-  inlineCardTitle:    { color: TEXT_PRIMARY,   fontFamily: FONTS.bold,   fontSize: 11, letterSpacing: 0.8 },
+  inlineCardTitle: { color: TEXT_PRIMARY, fontFamily: FONTS.bold, fontSize: 11, letterSpacing: 0.8 },
   inlineCardSubtitle: { color: TEXT_SECONDARY, fontFamily: FONTS.medium, fontSize: 12, marginTop: 2 },
 
   // ── Tool call badges ──
   toolRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
   toolBadge: {
-    flexDirection:   'row',
-    alignItems:      'center',
-    gap:             5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: 'rgba(245,208,96,0.12)',
     paddingHorizontal: 12,
     paddingVertical: 7,
-    borderRadius:    999,
-    borderWidth:     1,
-    borderColor:     'rgba(245,208,96,0.24)',
-    marginRight:     4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(245,208,96,0.24)',
+    marginRight: 4,
   },
   toolBadgeText: {
-    fontFamily:     FONTS.semibold,
-    fontSize:       11,
-    color:          GOLD,
-    textTransform:  'lowercase',
+    fontFamily: FONTS.semibold,
+    fontSize: 11,
+    color: GOLD,
+    textTransform: 'lowercase',
   },
 
   // ── Typing indicator ──
   typingBubble: { paddingVertical: 16, paddingHorizontal: 20 },
-  typingRow:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  typingRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   typingDot: {
     width: 8, height: 8, borderRadius: 4, backgroundColor: TEXT_MUTED,
   },
@@ -879,59 +879,59 @@ const styles = StyleSheet.create({
   // correctly on both platforms without any manual bottom-offset arithmetic.
   composerDock: {
     backgroundColor: '#15120d',
-    borderTopWidth:  1,
-    borderTopColor:  '#201c15',
+    borderTopWidth: 1,
+    borderTopColor: '#201c15',
   },
   composerRow: {
     paddingHorizontal: 12,
     // ✅ FIX 6: Symmetric vertical padding — same top and bottom — keeps the
     // input bar vertically centred and prevents it feeling bottom-heavy.
-    paddingTop:        10,
-    paddingBottom:     10,
-    backgroundColor:   '#15120d',
-    flexDirection:     'row',
-    alignItems:        'center',
-    gap:               8,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: '#15120d',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 
   plusBtn: {
-    width:         34,
-    height:        34,
+    width: 34,
+    height: 34,
     justifyContent: 'center',
-    alignItems:    'center',
-    borderRadius:  17,
+    alignItems: 'center',
+    borderRadius: 17,
   },
   inputWrap: {
-    flex:          1,
+    flex: 1,
     flexDirection: 'row',
-    alignItems:    'center',
-    borderWidth:   1,
-    borderColor:   '#3b3428',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#3b3428',
     backgroundColor: '#1a1610',
-    borderRadius:  20,
-    minHeight:     42,
-    paddingLeft:   12,
-    paddingRight:  4,
-    shadowColor:   GOLD,
+    borderRadius: 20,
+    minHeight: 42,
+    paddingLeft: 12,
+    paddingRight: 4,
+    shadowColor: GOLD,
   },
   inputWrapFocused: { borderColor: 'rgba(245,208,96,0.55)' },
   input: {
-    flex:          1,
-    color:         TEXT_PRIMARY,
-    fontFamily:    FONTS.medium,
-    fontSize:      14,
+    flex: 1,
+    color: TEXT_PRIMARY,
+    fontFamily: FONTS.medium,
+    fontSize: 14,
     paddingVertical: 9,
   },
   micBtn: {
-    width:         34,
-    height:        34,
+    width: 34,
+    height: 34,
     justifyContent: 'center',
-    alignItems:    'center',
-    borderRadius:  17,
+    alignItems: 'center',
+    borderRadius: 17,
   },
   micBtnRecording: {
-    opacity:         0.95,
-    borderRadius:    8,
+    opacity: 0.95,
+    borderRadius: 8,
     backgroundColor: 'rgba(239,83,80,0.2)',
   },
 
@@ -941,22 +941,22 @@ const styles = StyleSheet.create({
     // of the SafeAreaView stack. When the keyboard is open this whole View is
     // conditionally removed, so there is zero interference.
     backgroundColor: NAV_BG,
-    borderTopWidth:  StyleSheet.hairlineWidth,
-    borderTopColor:  '#1e1b14',
-    flexDirection:   'row',
-    justifyContent:  'space-around',
-    alignItems:      'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#1e1b14',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
   },
   navItem: {
-    alignItems:    'center',
-    gap:           2,
-    minWidth:      48,
+    alignItems: 'center',
+    gap: 2,
+    minWidth: 48,
     paddingVertical: 6,
   },
   navLabel: {
-    fontFamily:    FONTS.medium,
-    fontSize:      9,
-    color:         TEXT_MUTED,
+    fontFamily: FONTS.medium,
+    fontSize: 9,
+    color: TEXT_MUTED,
     letterSpacing: 0.55,
     textTransform: 'uppercase',
   },
