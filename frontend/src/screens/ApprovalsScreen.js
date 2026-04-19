@@ -9,6 +9,8 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Linking,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -275,6 +277,31 @@ export default function ApprovalsScreen() {
                 </View>
               </View>
 
+              {req.attachments && req.attachments.length > 0 && (
+                <View style={styles.attachmentsContainer}>
+                  {req.attachments.map((att, i) => {
+                    const isImage = att.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(att.fileName);
+                    return (
+                      <TouchableOpacity 
+                        key={i} 
+                        style={styles.attachmentItem} 
+                        onPress={() => Linking.openURL(att.url).catch(() => Alert.alert('Error', 'Could not open attachment.'))}
+                        activeOpacity={0.8}
+                      >
+                        {isImage ? (
+                           <Image source={{ uri: att.url }} style={styles.attachmentImage} resizeMode="cover" />
+                        ) : (
+                           <View style={styles.attachmentIconWrap}>
+                             <Ionicons name="document-text" size={24} color={theme.primary} />
+                           </View>
+                        )}
+                        <Text style={styles.attachmentText} numberOfLines={1}>{att.fileName}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
               <View style={styles.actionRow}>
                 <TouchableOpacity
                   style={[styles.actionBtn, styles.btnReject]}
@@ -380,6 +407,44 @@ const styles = StyleSheet.create({
   nameText:    { fontFamily: FONTS.semibold, fontSize: 18, color: theme.text, marginBottom: 2 },
   typeText:    { fontFamily: FONTS.medium,   fontSize: 14, color: '#D0BCA0',  marginBottom: 4 },
   dateText:    { fontFamily: FONTS.regular,  fontSize: 12, color: 'rgba(168,144,112,0.8)' },
+
+  attachmentsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  attachmentItem: {
+    width: 80,
+    alignItems: 'center',
+    gap: 6,
+  },
+  attachmentImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(245,208,96,0.3)',
+  },
+  attachmentIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: theme.surface2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(245,208,96,0.2)',
+  },
+  attachmentText: {
+    fontFamily: FONTS.medium,
+    fontSize: 10,
+    color: '#D0BCA0',
+    textAlign: 'center',
+  },
 
   actionRow: { flexDirection: 'row', gap: 12 },
   actionBtn: {

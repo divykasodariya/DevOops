@@ -24,6 +24,7 @@ class CopilotInput(BaseModel):
     input_mode: Literal["text", "voice"] = "text"
     history:    list[dict] = []             # [{role, content}, ...]
     token:      Optional[str] = None        # JWT from Node backend for API calls
+    attachments: list[dict] = []            # [{fileName, url, mimeType, size}]
 
 
 class CopilotResponse(BaseModel):

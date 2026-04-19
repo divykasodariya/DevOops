@@ -36,6 +36,7 @@ async def agent_chat(inp: CopilotInput):
             role=inp.role,
             history=inp.history,
             token=inp.token or "",
+            attachments=inp.attachments,
         )
     except Exception as e:
         logger.error(f"/copilot/agent fatal: {e}", exc_info=True)

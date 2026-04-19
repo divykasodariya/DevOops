@@ -21,6 +21,7 @@ import Reanimated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as DocumentPicker from 'expo-document-picker';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -68,6 +69,8 @@ export default function AIAssistantScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [attachments, setAttachments] = useState([]);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   // ── Typing-indicator dots ──────────────────────────────────────────────────
   const dot1 = useRef(new RNAnimated.Value(0)).current;
@@ -199,15 +202,19 @@ export default function AIAssistantScreen() {
 
   // ── Send ───────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(async (text) => {
-    if (!text?.trim()) return;
+    if (!text?.trim() && attachments.length === 0) return;
     const now    = new Date();
+    const currentAttachments = [...attachments];
     const userMsg = {
       id:   `u-${now.getTime()}`,
       role: 'user',
-      text: text.trim(),
+      text: (text || '').trim(),
       time: formatTime(now),
+      attachments: currentAttachments,
     };
     setMessages((prev) => [...prev, userMsg]);
+    setAttachments([]);
+    setInput('');
     setIsLoading(true);
     scrollToEnd();
 
@@ -220,8 +227,9 @@ export default function AIAssistantScreen() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          message: text.trim(),
+          message: (text || '').trim(),
           history: llmHistory.slice(-MAX_HISTORY),
+          attachments: currentAttachments,
         }),
       });
 
@@ -239,7 +247,7 @@ export default function AIAssistantScreen() {
       setLlmHistory((prev) => {
         const updated = [
           ...prev,
-          { role: 'user',      content: text.trim() },
+          { role: 'user',      content: (text || '').trim() },
           { role: 'assistant', content: replyText   },
         ];
         return updated.slice(-MAX_HISTORY);
@@ -264,9 +272,48 @@ export default function AIAssistantScreen() {
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || isLoading) return;
-    setInput('');
+    if ((!text && attachments.length === 0) || isLoading) return;
     sendMessage(text);
+  };
+
+  // ── Document Upload ────────────────────────────────────────────────────────
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      
+      const file = result.assets[0];
+      
+      setIsUploadingDoc(true);
+      const token = await AsyncStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('document', {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/octet-stream',
+      });
+      
+      const res = await fetch(`${API_BASE}/ai/upload-doc`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Upload failed');
+      
+      setAttachments((prev) => [...prev, data]);
+    } catch (err) {
+      console.error('Doc upload error:', err);
+      Alert.alert('Upload Error', err.message || 'Failed to upload document.');
+    } finally {
+      setIsUploadingDoc(false);
+    }
   };
 
   const handleClearChat = () => {
@@ -456,6 +503,16 @@ export default function AIAssistantScreen() {
                   >
                     {msg.text}
                   </Text>
+                  {msg.attachments && msg.attachments.length > 0 && (
+                    <View style={styles.msgAttachments}>
+                      {msg.attachments.map((att, i) => (
+                        <View key={i} style={styles.msgAttachmentBadge}>
+                          <Feather name="file-text" size={12} color={TEXT_DARK} />
+                          <Text style={styles.msgAttachmentText} numberOfLines={1}>{att.fileName}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                   {!!msg.card && (
                     <View style={styles.inlineCard}>
                       <View style={styles.inlineCardIcon}>
@@ -521,9 +578,26 @@ export default function AIAssistantScreen() {
 
         {/* ── Composer dock — lives INSIDE KAV so it rides above the keyboard ── */}
         <View style={styles.composerDock}>
+          {attachments.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.attachmentPreviewScroll}>
+              {attachments.map((att, i) => (
+                <View key={i} style={styles.attachmentPreview}>
+                  <Feather name="file" size={14} color={TEXT_PRIMARY} />
+                  <Text style={styles.attachmentPreviewText} numberOfLines={1}>{att.fileName}</Text>
+                  <PressableScale onPress={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}>
+                    <Feather name="x" size={16} color="#d78686" />
+                  </PressableScale>
+                </View>
+              ))}
+            </ScrollView>
+          )}
           <View style={styles.composerRow}>
-            <PressableScale style={styles.plusBtn} scaleTo={0.95}>
-              <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
+            <PressableScale style={styles.plusBtn} scaleTo={0.95} onPress={pickDocument} disabled={isUploadingDoc}>
+              {isUploadingDoc ? (
+                 <ActivityIndicator size="small" color={TEXT_PRIMARY} />
+              ) : (
+                 <Feather name="plus-circle" size={21} color={TEXT_PRIMARY} />
+              )}
             </PressableScale>
 
             <Reanimated.View
@@ -765,6 +839,39 @@ const styles = StyleSheet.create({
   typingDot: {
     width: 8, height: 8, borderRadius: 4, backgroundColor: TEXT_MUTED,
   },
+
+  // ── Attachments ──
+  msgAttachments: { marginTop: 8, gap: 6 },
+  msgAttachmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(32, 26, 16, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    gap: 6,
+  },
+  msgAttachmentText: { color: TEXT_DARK, fontFamily: FONTS.medium, fontSize: 11, maxWidth: 180 },
+  attachmentPreviewScroll: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 2,
+    maxHeight: 50,
+  },
+  attachmentPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#221f18',
+    borderWidth: 1,
+    borderColor: '#3b3428',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    gap: 8,
+  },
+  attachmentPreviewText: { color: TEXT_PRIMARY, fontFamily: FONTS.medium, fontSize: 12, maxWidth: 140 },
 
   // ── Composer dock ──
   // ✅ FIX 5: Composer is now a regular in-flow child of the KAV (not absolutely
