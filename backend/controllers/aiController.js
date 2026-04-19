@@ -25,19 +25,19 @@ export const chatWithAI = async (req, res) => {
 
     // Build the payload for FastAPI /api/copilot/agent
     const payload = {
-      message:    message.trim(),
+      message: message.trim(),
       session_id: req.user._id.toString(),   // use user ID as session
-      user_id:    req.user._id.toString(),
-      role:       req.user.role || 'student',
+      user_id: req.user._id.toString(),
+      role: req.user.role || 'student',
       history,
       token,
     };
 
     // Forward to FastAPI
     const response = await fetch(`${AI_SERVICE_URL}/api/copilot/agent`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -45,24 +45,24 @@ export const chatWithAI = async (req, res) => {
       console.error(`AI service error (${response.status}):`, errText);
       return res.status(502).json({
         message: 'AI service returned an error',
-        reply:   'Sorry, I\'m having trouble right now. Please try again in a moment.',
+        reply: 'Sorry, I\'m having trouble right now. Please try again in a moment.',
       });
     }
 
     const data = await response.json();
 
     return res.status(200).json({
-      reply:      data.reply      || 'I couldn\'t generate a response.',
+      reply: data.reply || 'I couldn\'t generate a response.',
       tool_calls: data.tool_calls || [],
-      results:    data.results    || {},
-      thoughts:   data.thoughts   || '',
+      results: data.results || {},
+      thoughts: data.thoughts || '',
     });
 
   } catch (error) {
     console.error('AI controller error:', error);
     return res.status(500).json({
       message: 'Internal server error',
-      reply:   'Sorry, something went wrong. Please try again.',
+      reply: 'Sorry, something went wrong. Please try again.',
     });
   }
 };
@@ -95,7 +95,7 @@ export const transcribeAudio = async (req, res) => {
     form.append('file', new Blob([req.file.buffer], { type: mime }), filename);
 
     const response = await fetch(GROQ_TRANSCRIBE_URL, {
-      method:  'POST',
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${key}`,
       },

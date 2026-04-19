@@ -76,7 +76,14 @@ const calculateMatchScore = (requestTags, professorInterests) => {
 
 export const createRequest = async (req, res) => {
   try {
-    const { type, title, description, meta, steps: customSteps } = req.body;
+    const { type, title, description, meta, steps: customSteps, attachments: rawAttachments } = req.body;
+
+    // Normalise attachments (may come from AI chat or manual upload)
+    const attachments = Array.isArray(rawAttachments)
+      ? rawAttachments
+          .filter((a) => a && a.url && a.fileName)
+          .map((a) => ({ fileName: a.fileName, url: a.url, mimeType: a.mimeType || '', size: a.size || 0 }))
+      : [];
 
     let steps = [];
     const validRoles = ['faculty', 'hod', 'principal', 'admin', 'support'];
@@ -174,12 +181,13 @@ export const createRequest = async (req, res) => {
 
     const request = await ApprovalRequest.create({
       requestedBy: req.user._id,
-      department: req.user.department, // Assuming user has department populated
+      department: req.user.department,
       type,
       title,
       description,
       steps,
-      meta
+      meta,
+      attachments,
     });
 
     // Notify the first approver
