@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -38,26 +39,6 @@ function typeLabel(type) {
   return String(type).replace(/_/g, ' ');
 }
 
-/** Demo rows so the screen always has examples before / alongside API data */
-const DUMMY_NOTIFICATIONS = [
-  {
-    _id: 'demo-north-gate',
-    title: 'North gate access restricted',
-    body: 'Maintenance on the north entrance until 6 PM. Please use the east lobby.',
-    isRead: false,
-    type: 'campus_ops',
-    createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-  },
-  {
-    _id: 'demo-library-hours',
-    title: 'Library extended hours this week',
-    body: 'Main library stays open until midnight through Friday for finals.',
-    isRead: true,
-    type: 'announcement',
-    createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
 async function resolveHomeRoute() {
   try {
     const raw = await AsyncStorage.getItem('user');
@@ -77,6 +58,8 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [markingId, setMarkingId] = useState(null);
+  const [markingAll, setMarkingAll] = useState(false);
 
   useEffect(() => {
     loadNotifications();
@@ -102,17 +85,57 @@ export default function NotificationsScreen() {
     }
   };
 
-  const allNotifications = useMemo(
-    () => [...DUMMY_NOTIFICATIONS, ...(Array.isArray(notifications) ? notifications : [])],
-    [notifications]
-  );
+  const markAsDone = async (id) => {
+    if (!id || markingId) return;
+    setMarkingId(String(id));
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || 'Could not mark as read');
+      }
+      setNotifications((prev) =>
+        prev.map((n) => (String(n._id) === String(id) ? { ...n, ...data, isRead: true } : n))
+      );
+    } catch (err) {
+      Alert.alert('Notification', err.message || 'Something went wrong');
+    } finally {
+      setMarkingId(null);
+    }
+  };
+
+  const markAllDone = async () => {
+    if (markingAll || !notifications.some((n) => !n.isRead)) return;
+    setMarkingAll(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const res = await fetch(`${API_BASE}/notifications/read-all`, {
+        method: 'PUT',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Could not mark all read');
+      }
+      await loadNotifications();
+    } catch (err) {
+      Alert.alert('Notifications', err.message || 'Something went wrong');
+    } finally {
+      setMarkingAll(false);
+    }
+  };
 
   const { unread, read } = useMemo(() => {
+    const list = Array.isArray(notifications) ? notifications : [];
     return {
-      unread: allNotifications.filter((item) => !item.isRead),
-      read: allNotifications.filter((item) => item.isRead),
+      unread: list.filter((item) => !item.isRead),
+      read: list.filter((item) => item.isRead),
     };
-  }, [allNotifications]);
+  }, [notifications]);
 
   const handleBack = async () => {
     if (navigation.canGoBack()) {
@@ -125,9 +148,13 @@ export default function NotificationsScreen() {
 
   const renderRow = (item, isUnread, hasBorderBottom) => {
     const key = item._id || `${item.title}-${item.createdAt}`;
+    const busy = markingId === String(item._id);
     return (
-      <View
+      <TouchableOpacity
         key={key}
+        activeOpacity={isUnread ? 0.75 : 1}
+        disabled={!isUnread || busy}
+        onPress={() => isUnread && markAsDone(item._id)}
         style={[styles.row, isUnread && styles.rowUnread, hasBorderBottom && styles.rowBorder]}
       >
         <View style={styles.rowMain}>
@@ -146,12 +173,21 @@ export default function NotificationsScreen() {
             </View>
             {isUnread ? (
               <View style={styles.newPill}>
-                <Text style={styles.newPillText}>New</Text>
+                <Text style={styles.newPillText}>New · tap to dismiss</Text>
               </View>
             ) : null}
           </View>
         </View>
-      </View>
+        {isUnread ? (
+          <View style={styles.rowAction}>
+            {busy ? (
+              <ActivityIndicator size="small" color={COLORS.gold} />
+            ) : (
+              <Feather name="check-circle" size={22} color={COLORS.gold} />
+            )}
+          </View>
+        ) : null}
+      </TouchableOpacity>
     );
   };
 
@@ -175,18 +211,33 @@ export default function NotificationsScreen() {
             <Text style={styles.title}>Notifications</Text>
             <Text style={styles.subtitle}>All campus updates in one place.</Text>
           </View>
-          <TouchableOpacity
-            style={styles.iconCircle}
-            onPress={loadNotifications}
-            activeOpacity={0.85}
-            hitSlop={{
-              top: 10,
-              bottom: 10,
-              left: 10,
-              right: 10
-            }}>
-            <Feather name="refresh-cw" size={15} color={COLORS.gold} />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={[styles.iconCircle, unread.length === 0 && styles.iconDisabled]}
+              onPress={markAllDone}
+              disabled={unread.length === 0 || markingAll}
+              activeOpacity={0.85}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              {markingAll ? (
+                <ActivityIndicator size="small" color={COLORS.gold} />
+              ) : (
+                <Feather name="check-square" size={15} color={COLORS.gold} />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.iconCircle}
+              onPress={loadNotifications}
+              activeOpacity={0.85}
+              hitSlop={{
+                top: 10,
+                bottom: 10,
+                left: 10,
+                right: 10
+              }}>
+              <Feather name="refresh-cw" size={15} color={COLORS.gold} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.statsPanel}>
@@ -197,7 +248,7 @@ export default function NotificationsScreen() {
           <View style={styles.statDivider} />
           <View style={styles.statCol}>
             <Text style={styles.statLabel}>TOTAL</Text>
-            <Text style={styles.statNumMuted}>{allNotifications.length}</Text>
+            <Text style={styles.statNumMuted}>{notifications.length}</Text>
           </View>
         </View>
 
@@ -215,7 +266,7 @@ export default function NotificationsScreen() {
               </View>
             ) : null}
 
-            {allNotifications.length === 0 && !error ? (
+            {notifications.length === 0 && !error ? (
               <View style={styles.emptyPanel}>
                 <View style={styles.emptyIconWrap}>
                   <Feather name="bell-off" size={28} color={COLORS.muted} />
@@ -270,6 +321,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: SPACING.medium,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
   iconCircle: {
     width: 36,
     height: 36,
@@ -279,6 +335,9 @@ const styles = StyleSheet.create({
     borderColor: '#3C2C1A',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconDisabled: {
+    opacity: 0.35,
   },
   headerCenter: {
     flex: 1,
@@ -444,6 +503,11 @@ const styles = StyleSheet.create({
   },
   rowMain: {
     flex: 1,
+  },
+  rowAction: {
+    justifyContent: 'center',
+    paddingLeft: 8,
+    minWidth: 32,
   },
   rowTitleRow: {
     flexDirection: 'row',

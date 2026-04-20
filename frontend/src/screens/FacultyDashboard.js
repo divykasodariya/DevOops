@@ -180,7 +180,9 @@ export default function FacultyDashboard() {
               <Text style={st.cardTitle}>Attendance Overview</Text>
               {/* Course sub-label matching the reference */}
               <Text style={st.cardSub}>
-                {attendance.courseName || 'CS301 - Intro to Algorithms'}
+                {attendance.courseName ||
+                  attendance.label ||
+                  (attendance.source === 'none' ? 'No sessions marked yet' : 'Attendance')}
               </Text>
             </View>
             <View style={st.attIconBox}>
@@ -190,13 +192,21 @@ export default function FacultyDashboard() {
 
           <View style={st.attBody}>
             <View>
-              <Text style={st.attPct}>{attendance.percentage ?? 94}%</Text>
-              <Text style={st.cardSub}>{attendance.label || 'Average this week'}</Text>
+              <Text style={st.attPct}>
+                {Math.max(0, Math.min(100, Math.round(Number(attendance.percentage) || 0)))}%
+              </Text>
+              <Text style={st.cardSub}>
+                {attendance.label ||
+                  (Number(attendance.totalClasses) > 0
+                    ? `${attendance.totalClasses} session(s)`
+                    : 'Mark attendance from your classes')}
+              </Text>
             </View>
             {/* Bar chart */}
             <View style={st.bars}>
               {bars.map((b, i) => {
-                const active = (attendance.percentage ?? 94) >= b.threshold;
+                const pct = Math.max(0, Math.min(100, Math.round(Number(attendance.percentage) || 0)));
+                const active = pct >= b.threshold;
                 return (
                   <LinearGradient
                     key={i}

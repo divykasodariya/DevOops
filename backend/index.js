@@ -17,6 +17,8 @@ import materialRoutes from './routes/material.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import aiRoutes from './routes/ai.js';
+import fineRoutes from './routes/fine.js';
+import courseRoutes from './routes/course.js';
 
 dotenv.config({});
 
@@ -56,6 +58,8 @@ app.use('/issues', issueRoutes);
 app.use('/materials', materialRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/ai', aiRoutes);
+app.use('/fines', fineRoutes);
+app.use('/courses', courseRoutes);
 
 const server = http.createServer(app);
 

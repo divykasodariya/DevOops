@@ -46,3 +46,18 @@ export const getMyIssues = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// GET /issues/all — operations queue (admin / principal / support)
+export const getAllIssues = async (req, res) => {
+  try {
+    const issues = await Issue.find()
+      .populate('reportedBy', 'name email rollNumber')
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+
+    res.json(issues);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

@@ -8,7 +8,7 @@ export const getMyNotifications = async (req, res) => {
   try {
     const notifications = await Notification.find({ recipient: req.user._id })
       .sort({ createdAt: -1 })
-      .limit(20);
+      .limit(80);
 
     res.json(notifications);
   } catch (error) {
@@ -96,11 +96,30 @@ export const markAsRead = async (req, res) => {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
+    if (notification.recipient.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not allowed to update this notification' });
+    }
+
     notification.isRead = true;
     notification.readAt = new Date();
     await notification.save();
 
     res.json(notification);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /notifications/read-all — mark entire inbox read for current user
+export const markAllAsRead = async (req, res) => {
+  try {
+    const now = new Date();
+    const result = await Notification.updateMany(
+      { recipient: req.user._id, isRead: false },
+      { $set: { isRead: true, readAt: now } }
+    );
+
+    res.json({ modifiedCount: result.modifiedCount });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

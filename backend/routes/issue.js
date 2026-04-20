@@ -1,8 +1,12 @@
 import express from 'express';
-import { protect } from '../middleware/authMiddleware.js';
-import { createIssue, getMyIssues } from '../controllers/issueController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
+import { createIssue, getMyIssues, getAllIssues } from '../controllers/issueController.js';
 
 const router = express.Router();
+
+router
+  .route('/all')
+  .get(protect, authorize('admin', 'principal', 'support'), getAllIssues);
 
 router.route('/')
   .post(protect, createIssue);
