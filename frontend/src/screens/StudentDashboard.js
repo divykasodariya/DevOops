@@ -386,7 +386,12 @@ export default function StudentDashboard() {
               <View style={styles.ringWrap}>
                 <AttendanceRing pct={attendance.percentage || 0} />
               </View>
-              <Text style={styles.attStatus}>{attendance.status || 'On Track'}</Text>
+              <Text style={styles.attStatus}>{attendance.status || 'No Data'}</Text>
+              {!!attendance.label && (
+                <Text style={styles.attCaption} numberOfLines={2}>
+                  {attendance.label}
+                </Text>
+              )}
             </View>
           </Animated.View>
 
@@ -723,6 +728,15 @@ const styles = StyleSheet.create({
   ringPct: { fontFamily: FONTS.semibold, fontSize: 22, color: TEXT_PRIMARY },
   ringWrap: { marginVertical: SPACING.small },
   attStatus: { fontFamily: FONTS.medium, fontSize: TY.label, color: GOLD_MUTED, letterSpacing: 0.3, textAlign: 'center' },
+  attCaption: {
+    fontFamily: FONTS.regular,
+    fontSize: TY.caption,
+    color: TEXT_MUTED,
+    textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 8,
+    lineHeight: 14,
+  },
 
   annSection: { marginBottom: SPACING.medium },
   annSectionHead: { marginBottom: SPACING.small },

@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { SPACING } from '../theme/spacing';
-import { TYPOGRAPHY } from '../theme/typography';
+import { TYPOGRAPHY, FONTS } from '../theme/typography';
 import { API_BASE } from '../config/api';
 
 export default function AdminDashboard() {
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [user, setUser] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [fineForm, setFineForm] = useState({
@@ -72,13 +73,26 @@ export default function AdminDashboard() {
       const rawUser = await AsyncStorage.getItem('user');
       if (rawUser) setUser(JSON.parse(rawUser));
 
-      const [requests, notes] = await Promise.all([
+      const token = await AsyncStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const [reqRes, notRes, issRes] = await Promise.allSettled([
         apiFetch('/request'),
         apiFetch('/notifications/my'),
+        fetch(`${API_BASE}/issues/all`, { headers }).then(async (res) => {
+          if (!res.ok) return [];
+          const j = await res.json();
+          return Array.isArray(j) ? j : [];
+        }),
       ]);
 
-      setPendingApprovals(Array.isArray(requests) ? requests : []);
-      setNotifications(Array.isArray(notes) ? notes : []);
+      setPendingApprovals(
+        reqRes.status === 'fulfilled' && Array.isArray(reqRes.value) ? reqRes.value : []
+      );
+      setNotifications(
+        notRes.status === 'fulfilled' && Array.isArray(notRes.value) ? notRes.value : []
+      );
+      setIssues(issRes.status === 'fulfilled' && Array.isArray(issRes.value) ? issRes.value : []);
     } catch (err) {
       setError(err.message || 'Unable to connect to backend');
     } finally {
@@ -129,15 +143,15 @@ export default function AdminDashboard() {
   const firstName = user?.name?.split(' ')[0] || 'Admin';
   const unreadCount = notifications.filter((item) => !item.isRead).length;
   const pendingCount = pendingApprovals.length;
-  const urgentCount = pendingApprovals.filter(
-    (item) => `${item.overallStatus || ''}`.toLowerCase() === 'urgent'
+  const issueOpenCount = issues.filter(
+    (i) => i.status === 'open' || i.status === 'in_progress'
   ).length;
-  const activeIssues = urgentCount || 87;
+  const activeIssues = issueOpenCount;
   const totalStudents = 14285;
   const activeStudentsToday = Math.min(totalStudents, 9824 + unreadCount * 12);
   const totalSeats = 11200;
   const occupiedSeats = Math.min(totalSeats, 8360 + pendingCount * 6);
-  const maintenanceTickets = activeIssues + pendingCount;
+  const maintenanceTickets = issueOpenCount + pendingCount;
   const maintenanceResolved = Math.max(0, maintenanceTickets - 24);
   const infraUptime = Math.max(94.5, 98.9 - pendingCount * 0.15);
   const resourceUsage = [
@@ -240,9 +254,11 @@ export default function AdminDashboard() {
 
         <View style={styles.metricCard}>
           <View style={styles.metricTextWrap}>
-            <Text style={styles.metricLabel}>ACTIVE ISSUES</Text>
-            <Text style={styles.metricValue}>{activeIssues}</Text>
-            <Text style={styles.metricTrendDown}>-0.7%</Text>
+            <Text style={styles.metricLabel}>OPEN ISSUES</Text>
+            <Text style={styles.metricValue}>{issueOpenCount}</Text>
+            <Text style={styles.metricTrendDown}>
+              {issues.length ? `${issues.length} total logged` : 'None reported'}
+            </Text>
           </View>
           <View style={styles.metricIconWrap}>
             <Feather name="alert-triangle" size={16} color="#E88B8B" />
@@ -270,20 +286,93 @@ export default function AdminDashboard() {
         </TouchableOpacity>
 
         <View style={styles.panel}>
+          <View style={styles.panelHeaderRow}>
+            <Text style={styles.panelTitle}>Reported issues</Text>
+            <TouchableOpacity
+              onPress={() => router.push('/report-issue')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.panelLink}>Log test issue</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.panelSubtext}>
+            Latest facility / IT tickets from students and staff (open + in progress highlighted).
+          </Text>
+          {issues.length === 0 ? (
+            <Text style={styles.emptyIssues}>No issues in the system yet.</Text>
+          ) : (
+            issues.slice(0, 15).map((item) => (
+              <TouchableOpacity
+                key={item._id}
+                style={styles.issueCard}
+                activeOpacity={0.82}
+                onPress={() =>
+                  Alert.alert(
+                    item.title || 'Issue',
+                    [
+                      item.description || 'No description',
+                      '',
+                      `Category: ${item.category || '—'}`,
+                      `Location: ${item.location || '—'}`,
+                      `Priority: ${item.priority || '—'}`,
+                      `Status: ${item.status || '—'}`,
+                      item.reportedBy?.name ? `Reported by: ${item.reportedBy.name}` : '',
+                    ]
+                      .filter(Boolean)
+                      .join('\n'),
+                    [{ text: 'Close' }]
+                  )
+                }>
+                <View style={styles.issueTop}>
+                  <Text style={styles.issueTitle} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <View
+                    style={[
+                      styles.issuePill,
+                      item.status === 'open' || item.status === 'in_progress'
+                        ? styles.issuePillOpen
+                        : styles.issuePillDone,
+                    ]}>
+                    <Text style={styles.issuePillText}>{item.status || 'open'}</Text>
+                  </View>
+                </View>
+                <Text style={styles.issueMeta} numberOfLines={1}>
+                  {[item.category, item.location].filter(Boolean).join(' · ')}
+                </Text>
+                <Text style={styles.issueMeta} numberOfLines={1}>
+                  {item.reportedBy?.name ? `By ${item.reportedBy.name}` : 'Unknown reporter'}
+                  {item.createdAt
+                    ? ` · ${new Date(item.createdAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}`
+                    : ''}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+          {issues.length > 15 && (
+            <Text style={styles.issueMore}>Showing 15 of {issues.length}. Pull to refresh after reseed.</Text>
+          )}
+        </View>
+
+        <View style={styles.panel}>
           <Text style={styles.panelTitle}>Impose Fine</Text>
-          <Text style={styles.panelSubtext}>Enter student details, amount and reason.</Text>
+          <Text style={styles.panelSubtext}>
+            Name must match the account exactly. ID can be roll number, email, or Mongo user id.
+          </Text>
           <TextInput
             style={styles.input}
             value={fineForm.studentName}
             onChangeText={(text) => setFineForm((prev) => ({ ...prev, studentName: text }))}
-            placeholder="Student name"
+            placeholder="Full name (as on account)"
             placeholderTextColor={COLORS.textSecondary}
           />
           <TextInput
             style={styles.input}
             value={fineForm.studentId}
             onChangeText={(text) => setFineForm((prev) => ({ ...prev, studentId: text }))}
-            placeholder="Student ID"
+            placeholder="Roll number, email, or user id"
             placeholderTextColor={COLORS.textSecondary}
           />
           <TextInput
@@ -615,5 +704,77 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.body,
     color: COLORS.error,
     marginBottom: 8,
+  },
+  panelHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  panelLink: {
+    ...TYPOGRAPHY.label,
+    color: COLORS.gold,
+    fontSize: 12,
+  },
+  emptyIssues: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.muted,
+    fontSize: 13,
+    paddingVertical: 8,
+  },
+  issueCard: {
+    backgroundColor: '#171109',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#322414',
+    padding: 12,
+    marginBottom: 8,
+  },
+  issueTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 6,
+  },
+  issueTitle: {
+    ...TYPOGRAPHY.body,
+    color: COLORS.white,
+    fontSize: 15,
+    flex: 1,
+    fontFamily: FONTS.semibold,
+  },
+  issuePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  issuePillOpen: {
+    borderColor: '#C86A5B',
+    backgroundColor: 'rgba(200,106,91,0.15)',
+  },
+  issuePillDone: {
+    borderColor: '#4A6B4E',
+    backgroundColor: 'rgba(99,203,165,0.12)',
+  },
+  issuePillText: {
+    ...TYPOGRAPHY.label,
+    fontSize: 10,
+    color: COLORS.white,
+    textTransform: 'capitalize',
+  },
+  issueMeta: {
+    ...TYPOGRAPHY.label,
+    fontSize: 11,
+    color: '#9E8A68',
+    marginTop: 2,
+  },
+  issueMore: {
+    ...TYPOGRAPHY.label,
+    fontSize: 11,
+    color: COLORS.muted,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
